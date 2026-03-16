@@ -1,0 +1,77 @@
+// ── Chapter colors ────────────────────────────────────────────────────────────
+export const CHAPTER_COLORS = [
+  { id: 'teal',   bg: '#E1F5EE', accent: '#1D9E75', name: 'Vert' },
+  { id: 'blue',   bg: '#E6F1FB', accent: '#378ADD', name: 'Bleu' },
+  { id: 'purple', bg: '#EEEDFE', accent: '#7F77DD', name: 'Violet' },
+  { id: 'amber',  bg: '#FAEEDA', accent: '#EF9F27', name: 'Ambre' },
+  { id: 'coral',  bg: '#FAECE7', accent: '#D85A30', name: 'Corail' },
+  { id: 'pink',   bg: '#FBEAF0', accent: '#D4537E', name: 'Rose' },
+  { id: 'red',    bg: '#FCEBEB', accent: '#E24B4A', name: 'Rouge' },
+  { id: 'gray',   bg: '#F1EFE8', accent: '#888780', name: 'Gris' },
+]
+
+// ── Chapter icons ─────────────────────────────────────────────────────────────
+export const CHAPTER_ICONS = {
+  health:   { label: 'Santé',         path: 'M8 14C8 14 2 10 2 6C2 4 4 2 6 2C7 2 8 3 8 3C8 3 9 2 10 2C12 2 14 4 14 6C14 10 8 14 8 14Z' },
+  sport:    { label: 'Sport',         custom: true },
+  work:     { label: 'Carrière',      custom: true },
+  creative: { label: 'Créativité',    custom: true },
+  learn:    { label: 'Apprentissage', custom: true },
+  finance:  { label: 'Finance',       custom: true },
+  travel:   { label: 'Voyage',        custom: true },
+  social:   { label: 'Relations',     custom: true },
+  home:     { label: 'Maison',        custom: true },
+  book:     { label: 'Lecture',       custom: true },
+  music:    { label: 'Musique',       custom: true },
+  mind:     { label: 'Bien-être',     custom: true },
+  code:     { label: 'Code',          custom: true },
+  food:     { label: 'Cuisine',       custom: true },
+  nature:   { label: 'Nature',        custom: true },
+  photo:    { label: 'Photo',         custom: true },
+}
+
+// ── XP Levels ─────────────────────────────────────────────────────────────────
+export const XP_LEVELS = [
+  { level: 1,  xp: 0,      label: 'Débutant' },
+  { level: 2,  xp: 200,    label: 'Apprenti' },
+  { level: 3,  xp: 500,    label: 'Explorateur' },
+  { level: 4,  xp: 1000,   label: 'Aventurier' },
+  { level: 5,  xp: 2000,   label: 'Expert' },
+  { level: 6,  xp: 3500,   label: 'Maître' },
+  { level: 7,  xp: 5500,   label: 'Champion' },
+  { level: 8,  xp: 8000,   label: 'Légende' },
+  { level: 9,  xp: 11000,  label: 'Héros' },
+  { level: 10, xp: 15000,  label: 'Transcendant' },
+]
+
+export function getLevelFromXP(xp) {
+  let current = XP_LEVELS[0]
+  for (const lvl of XP_LEVELS) {
+    if (xp >= lvl.xp) current = lvl
+    else break
+  }
+  return current
+}
+
+export function getNextLevel(currentLevel) {
+  return XP_LEVELS.find(l => l.level === currentLevel + 1) || null
+}
+
+// ── Badge triggers ────────────────────────────────────────────────────────────
+export const BADGE_DEFS = [
+  { id: 'first_quest',    label: 'Premier pas',         desc: 'Première quête complétée',         trigger: (s) => s.totalCompleted >= 1 },
+  { id: 'quest_5',        label: 'En route',            desc: '5 quêtes complétées',               trigger: (s) => s.totalCompleted >= 5 },
+  { id: 'quest_10',       label: 'Régulier',            desc: '10 quêtes complétées',              trigger: (s) => s.totalCompleted >= 10 },
+  { id: 'quest_50',       label: 'Quêteur chevronné',   desc: '50 quêtes complétées',              trigger: (s) => s.totalCompleted >= 50 },
+  { id: 'xp_500',         label: 'Accumulateur',        desc: '500 XP cumulés',                    trigger: (s) => s.totalXP >= 500 },
+  { id: 'xp_1000',        label: 'Millionnaire XP',     desc: '1 000 XP cumulés',                  trigger: (s) => s.totalXP >= 1000 },
+  { id: 'level_5',        label: 'Demi-chemin',         desc: 'Niveau 5 atteint',                  trigger: (s) => s.level >= 5 },
+  { id: 'chapters_3',     label: 'Organisateur',        desc: '3 chapitres créés',                 trigger: (s) => s.totalChapters >= 3 },
+  { id: 'boss_done',      label: 'Boss vaincu',         desc: 'Quête de type boss complétée',      trigger: (s) => s.bossCompleted >= 1 },
+  { id: 'chapter_100',    label: 'Maître du chapitre',  desc: 'Un chapitre complété à 100%',       trigger: (s) => s.chapterCompleted >= 1 },
+]
+
+// ── Quest defaults ────────────────────────────────────────────────────────────
+export const QUEST_STATUS = { DRAFT: 'draft', LOCKED: 'locked', ACTIVE: 'active', DONE: 'done' }
+export const QUEST_TYPE   = { STANDARD: 'standard', HABIT: 'habit', BOSS: 'boss' }
+export const DEFAULT_XP   = 50
