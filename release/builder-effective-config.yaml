@@ -1,0 +1,23 @@
+directories:
+  output: release
+  buildResources: build
+appId: com.questlife.desktop
+productName: QuestLife
+files:
+  - filter:
+      - dist/**/*
+      - electron/**/*
+      - package.json
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: assets/icons/icon.ico
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: QuestLife
+electronVersion: 34.5.8

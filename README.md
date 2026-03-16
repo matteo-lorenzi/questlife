@@ -24,6 +24,54 @@ npm run build
 npm run preview
 ```
 
+## Version application de bureau (Windows)
+
+Cette version permet de distribuer QuestLife sous forme d installeur `.exe`.
+
+### Developpement desktop
+
+```bash
+npm run electron:dev
+```
+
+### Generer un installeur Windows (.exe)
+
+```bash
+npm run electron:build
+```
+
+Le fichier installeur est genere dans `release/`.
+
+### Build signe (Code Signing Windows)
+
+Le build signe utilise les variables standard `CSC_LINK` et `CSC_KEY_PASSWORD`.
+
+Exemple PowerShell:
+
+```powershell
+$env:CSC_LINK = "file:///C:/certs/questlife-signing.pfx"
+$env:CSC_KEY_PASSWORD = "ton-mot-de-passe"
+npm run electron:build:signed
+```
+
+Si ces variables sont absentes, le script s arrete avec erreur.
+
+### Generer une version portable (sans install)
+
+```bash
+npm run electron:build:dir
+```
+
+Le binaire est genere dans `release/win-unpacked/`.
+
+### Auto-update
+
+1. Configure l URL de mise a jour dans `electron/update-config.json`.
+2. Heberge le contenu de `release/` (au minimum `latest.yml` + le setup `.exe`) sur cette URL.
+3. Au lancement de l application installee, QuestLife verifie automatiquement les mises a jour.
+
+Option: tu peux surcharger l URL via la variable d environnement `QUESTLIFE_UPDATE_URL`.
+
 ## Initialiser un repo GitHub
 
 ```bash

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="QuestLife icon">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1D9E75"/>
+      <stop offset="100%" stop-color="#378ADD"/>
+    </linearGradient>
+    <linearGradient id="sword" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FAEEDA"/>
+      <stop offset="100%" stop-color="#F8D27A"/>
+    </linearGradient>
+  </defs>
+  <rect x="42" y="42" width="428" height="428" rx="120" fill="url(#bg)"/>
+  <path d="M226 122h60l-8 78h-44z" fill="#D9FBEE" opacity="0.9"/>
+  <path d="M256 146l92 92-30 30-62-62-62 62-30-30z" fill="url(#sword)"/>
+  <path d="M160 306h192v40H160z" fill="#0D6A4E"/>
+  <circle cx="176" cy="326" r="10" fill="#D9FBEE"/>
+  <circle cx="336" cy="326" r="10" fill="#D9FBEE"/>
+  <path d="M256 226l94 94-21 21-73-73-73 73-21-21z" fill="#FAEEDA" opacity="0.9"/>
+</svg>

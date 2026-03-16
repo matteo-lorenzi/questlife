@@ -1,0 +1,8 @@
+version: 1.0.0
+files:
+  - url: QuestLife-Setup-1.0.0.exe
+    sha512: zYgSAhJRr+oPHSa8uctJjMmt0vUNInfdmtDRxZaS82pWbXG9HCEGptjPIbQ6t/d4PJq+UU7s0LX2KEDu64FXxQ==
+    size: 83659076
+path: QuestLife-Setup-1.0.0.exe
+sha512: zYgSAhJRr+oPHSa8uctJjMmt0vUNInfdmtDRxZaS82pWbXG9HCEGptjPIbQ6t/d4PJq+UU7s0LX2KEDu64FXxQ==
+releaseDate: '2026-03-16T11:56:13.248Z'
