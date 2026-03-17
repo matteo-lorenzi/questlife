@@ -256,18 +256,142 @@ Les badges sont vérifiés via `get()._checkBadges()` après chaque `completeQue
 
 ## Palette de couleurs disponibles
 
+Chaque couleur expose désormais trois valeurs : `bg` (fond light), `bgDark` (fond dark), `accent` (partagé).
+
 ```js
 // Depuis utils/constants.js — CHAPTER_COLORS
 [
-  { id: 'teal',   bg: '#E1F5EE', accent: '#1D9E75' },
-  { id: 'blue',   bg: '#E6F1FB', accent: '#378ADD' },
-  { id: 'purple', bg: '#EEEDFE', accent: '#7F77DD' },
-  { id: 'amber',  bg: '#FAEEDA', accent: '#EF9F27' },
-  { id: 'coral',  bg: '#FAECE7', accent: '#D85A30' },
-  { id: 'pink',   bg: '#FBEAF0', accent: '#D4537E' },
-  { id: 'red',    bg: '#FCEBEB', accent: '#E24B4A' },
-  { id: 'gray',   bg: '#F1EFE8', accent: '#888780' },
+  { id: 'teal',   bg: '#E1F5EE', bgDark: '#0A2E22', accent: '#1D9E75' },
+  { id: 'blue',   bg: '#E6F1FB', bgDark: '#0C1E35', accent: '#378ADD' },
+  { id: 'purple', bg: '#EEEDFE', bgDark: '#16143A', accent: '#7F77DD' },
+  { id: 'amber',  bg: '#FAEEDA', bgDark: '#2E1E06', accent: '#EF9F27' },
+  { id: 'coral',  bg: '#FAECE7', bgDark: '#2E0F06', accent: '#D85A30' },
+  { id: 'pink',   bg: '#FBEAF0', bgDark: '#2E0A18', accent: '#D4537E' },
+  { id: 'red',    bg: '#FCEBEB', bgDark: '#2E0808', accent: '#E24B4A' },
+  { id: 'gray',   bg: '#F1EFE8', bgDark: '#1C1C1A', accent: '#888780' },
 ]
 ```
 
-Toujours utiliser `chapter.color.bg` pour les fonds clairs et `chapter.color.accent` pour les textes, bordures et icônes colorées.
+Pour appliquer la bonne couleur de fond selon le thème actif :
+```js
+// Dans un composant React
+const { theme } = useStore()
+const bgColor = theme === 'dark' ? chapter.color.bgDark : chapter.color.bg
+```
+
+Toujours utiliser `chapter.color.accent` pour les textes colorés, bordures et icônes (valeur identique en light et dark).
+
+---
+
+## Dark mode
+
+### Configuration Tailwind
+Le dark mode utilise le mode `class` (pas `media`) pour permettre un toggle manuel.
+
+```js
+// tailwind.config.js
+export default {
+  darkMode: 'class',
+  // ...
+}
+```
+
+### Toggle et persistance
+```js
+// Dans useStore.js — état UI (non persisté dans questlife_data)
+theme: 'light' | 'dark',   // lu depuis localStorage('questlife_theme') au démarrage
+toggleTheme() {
+  const next = get().theme === 'light' ? 'dark' : 'light'
+  document.documentElement.classList.toggle('dark', next === 'dark')
+  localStorage.setItem('questlife_theme', next)
+  set({ theme: next })
+},
+```
+
+Initialisation au démarrage (dans `App.jsx`, avant le premier render) :
+```js
+const saved = localStorage.getItem('questlife_theme')
+const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+const initial = saved ?? (prefersDark ? 'dark' : 'light')
+document.documentElement.classList.toggle('dark', initial === 'dark')
+```
+
+### Règles d'écriture des composants
+
+- **Toujours** écrire les classes Tailwind avec leur variante `dark:` dès la création du composant
+- Ne jamais hardcoder une couleur claire sans sa contrepartie dark
+- Utiliser les classes sémantiques en priorité : `bg-white dark:bg-zinc-900`, `text-gray-900 dark:text-gray-100`, `border-gray-200 dark:border-zinc-700`
+
+**Patterns courants à utiliser systématiquement :**
+
+```jsx
+// Fond de page
+<div className="bg-gray-50 dark:bg-zinc-950">
+
+// Carte / panel
+<div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700">
+
+// Texte principal
+<p className="text-gray-900 dark:text-gray-100">
+
+// Texte secondaire
+<p className="text-gray-500 dark:text-gray-400">
+
+// Input
+<input className="bg-white dark:bg-zinc-800 border-gray-300 dark:border-zinc-600 text-gray-900 dark:text-gray-100">
+
+// Hover interactif
+<button className="hover:bg-gray-100 dark:hover:bg-zinc-800">
+```
+
+### Canvas React Flow en dark mode
+
+React Flow n'utilise pas Tailwind — ses couleurs doivent être passées via `style` ou les props de configuration :
+
+```jsx
+<ReactFlow
+  style={{ background: theme === 'dark' ? '#09090b' : '#fafaf9' }}
+>
+  <Background
+    color={theme === 'dark' ? '#3f3f46' : '#d4d4d4'}
+    variant="dots"
+  />
+</ReactFlow>
+```
+
+Les edges adaptent leur couleur selon le thème :
+```js
+const getEdgeStyle = (sourceStatus, theme) => ({
+  stroke: sourceStatus === 'done'
+    ? '#1D9E75'
+    : theme === 'dark' ? '#52525b' : '#d4d4d4',
+  strokeDasharray: sourceStatus === 'locked' ? '5,5' : undefined,
+})
+```
+
+### Nœuds QuestNode en dark mode
+
+Les nœuds utilisent `style` inline → calculer les couleurs depuis le thème actif, jamais depuis une constante fixe :
+
+```js
+// Dans QuestNode.jsx
+const { theme } = useStore()
+const chapter = useStore(s => s.chapters.find(c => c.id === data.chapterId))
+const bgColor = theme === 'dark' ? chapter.color.bgDark : chapter.color.bg
+
+style={{ background: bgColor, borderColor: chapter.color.accent }}
+```
+
+### Bouton de toggle dans l'UI
+
+Placer le bouton de basculement light/dark dans le header de la page d'accueil, à droite du bouton Compte. Utiliser une icône SVG soleil/lune (jamais un emoji).
+
+### Points de migration pour les composants existants
+
+Tout composant qui consommait `chapter.color.bg` doit être mis à jour pour lire la bonne variante selon le thème. Checklist des fichiers impactés :
+- `ChapterCard.jsx` — fond de carte
+- `ChapterModal.jsx` — prévisualisation couleur
+- `QuestNode.jsx` — fond du nœud
+- `CanvasView.jsx` — fond du canvas + Background
+- `ChapterHeader.jsx` — barre de progression
+- `ProfilePage.jsx` — badges et barres de progression chapitres
