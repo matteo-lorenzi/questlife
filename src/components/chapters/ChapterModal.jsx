@@ -9,10 +9,10 @@ const ICONS = Object.keys(CHAPTER_ICONS)
 export default function ChapterModal() {
   const { showChapterModal, editingChapter, closeChapterModal, createChapter, updateChapter, setActiveChapter, theme } = useStore()
 
-  const [name, setName]       = useState('')
-  const [desc, setDesc]       = useState('')
-  const [color, setColor]     = useState(CHAPTER_COLORS[0])
-  const [icon, setIcon]       = useState('health')
+  const [name, setName] = useState('')
+  const [desc, setDesc] = useState('')
+  const [color, setColor] = useState(CHAPTER_COLORS[0])
+  const [icon, setIcon] = useState('health')
   const [nameErr, setNameErr] = useState('')
 
   const isEdit = !!editingChapter?.id

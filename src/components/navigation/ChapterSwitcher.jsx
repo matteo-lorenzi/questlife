@@ -30,7 +30,7 @@ export default function ChapterSwitcher({ chapter }) {
         </div>
         <span className="text-sm font-medium text-gray-900 max-w-[160px] truncate">{chapter.title}</span>
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="text-gray-400 flex-shrink-0">
-          <path d="M2 4L5 7L8 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M2 4L5 7L8 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
 
@@ -57,7 +57,7 @@ export default function ChapterSwitcher({ chapter }) {
                     <p className="text-xs text-gray-400">{prog.done}/{prog.total} · {prog.pct}%</p>
                   </div>
                   <div className="w-14 flex-shrink-0"><ProgressBar pct={prog.pct} accent={ch.color.accent} height={3} /></div>
-                  {isCurrent && (<svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="flex-shrink-0"><path d="M2 6L5 9L10 3" stroke={ch.color.accent} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>)}
+                  {isCurrent && (<svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="flex-shrink-0"><path d="M2 6L5 9L10 3" stroke={ch.color.accent} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>)}
                 </button>
               )
             })}

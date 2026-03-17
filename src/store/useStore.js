@@ -48,7 +48,9 @@ function emitToast(msg, type = "success") {
 function getInitialTheme() {
   const savedTheme = localStorage.getItem("questlife_theme");
   if (savedTheme === "light" || savedTheme === "dark") return savedTheme;
-  const prefersDark = globalThis.matchMedia?.("(prefers-color-scheme: dark)")?.matches;
+  const prefersDark = globalThis.matchMedia?.(
+    "(prefers-color-scheme: dark)",
+  )?.matches;
   return prefersDark ? "dark" : "light";
 }
 
@@ -217,7 +219,8 @@ export const useStore = create((set, get) => ({
       color: {
         bg: ch.color?.bg || colorDef?.bg || CHAPTER_COLORS[0].bg,
         bgDark: colorDef?.bgDark || CHAPTER_COLORS[0].bgDark,
-        accent: ch.color?.accent || colorDef?.accent || CHAPTER_COLORS[0].accent,
+        accent:
+          ch.color?.accent || colorDef?.accent || CHAPTER_COLORS[0].accent,
       },
     };
   }),
@@ -253,7 +256,10 @@ export const useStore = create((set, get) => ({
 
   toggleTheme() {
     const next = get().theme === "light" ? "dark" : "light";
-    globalThis.document?.documentElement.classList.toggle("dark", next === "dark");
+    globalThis.document?.documentElement.classList.toggle(
+      "dark",
+      next === "dark",
+    );
     localStorage.setItem("questlife_theme", next);
     set({ theme: next });
   },
@@ -270,7 +276,9 @@ export const useStore = create((set, get) => ({
   },
 
   createChapter(data) {
-    const colorDef = CHAPTER_COLORS.find((c) => c.accent === data?.color?.accent);
+    const colorDef = CHAPTER_COLORS.find(
+      (c) => c.accent === data?.color?.accent,
+    );
     const chapter = {
       id: nanoid(),
       order: get().chapters.length,
@@ -279,8 +287,10 @@ export const useStore = create((set, get) => ({
       ...data,
       color: {
         bg: data?.color?.bg || colorDef?.bg || CHAPTER_COLORS[0].bg,
-        bgDark: data?.color?.bgDark || colorDef?.bgDark || CHAPTER_COLORS[0].bgDark,
-        accent: data?.color?.accent || colorDef?.accent || CHAPTER_COLORS[0].accent,
+        bgDark:
+          data?.color?.bgDark || colorDef?.bgDark || CHAPTER_COLORS[0].bgDark,
+        accent:
+          data?.color?.accent || colorDef?.accent || CHAPTER_COLORS[0].accent,
       },
     };
     set((s) => ({ chapters: [...s.chapters, chapter] }));
@@ -291,7 +301,9 @@ export const useStore = create((set, get) => ({
   },
 
   updateChapter(id, data) {
-    const colorDef = CHAPTER_COLORS.find((c) => c.accent === data?.color?.accent);
+    const colorDef = CHAPTER_COLORS.find(
+      (c) => c.accent === data?.color?.accent,
+    );
     set((s) => ({
       chapters: s.chapters.map((c) =>
         c.id === id
@@ -300,14 +312,21 @@ export const useStore = create((set, get) => ({
               ...data,
               color: data?.color
                 ? {
-                    bg: data.color.bg || colorDef?.bg || c.color?.bg || CHAPTER_COLORS[0].bg,
+                    bg:
+                      data.color.bg ||
+                      colorDef?.bg ||
+                      c.color?.bg ||
+                      CHAPTER_COLORS[0].bg,
                     bgDark:
                       data.color.bgDark ||
                       colorDef?.bgDark ||
                       c.color?.bgDark ||
                       CHAPTER_COLORS[0].bgDark,
                     accent:
-                      data.color.accent || colorDef?.accent || c.color?.accent || CHAPTER_COLORS[0].accent,
+                      data.color.accent ||
+                      colorDef?.accent ||
+                      c.color?.accent ||
+                      CHAPTER_COLORS[0].accent,
                   }
                 : c.color,
             }

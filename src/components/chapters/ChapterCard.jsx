@@ -8,10 +8,10 @@ import { getChapterBg } from '../../utils/constants'
 
 export default function ChapterCard({ chapter }) {
   const { quests, setActiveChapter, deleteChapter, openChapterModal, theme } = useStore()
-  const [menu, setMenu]         = useState(false)
+  const [menu, setMenu] = useState(false)
   const [confirmDel, setConfirm] = useState(false)
 
-  const cq       = quests.filter(q => q.chapterId === chapter.id)
+  const cq = quests.filter(q => q.chapterId === chapter.id)
   const progress = getChapterProgress(cq)
   const accent = chapter.color.accent
   const bg = getChapterBg(chapter.color, theme)
@@ -29,20 +29,20 @@ export default function ChapterCard({ chapter }) {
         <div className="relative overflow-hidden rounded-xl">
           {/* Decorative corner */}
           <div className="absolute top-0 right-0 w-14 h-14 rounded-bl-[60px] opacity-40 pointer-events-none"
-               style={{ background: bg }} />
+            style={{ background: bg }} />
 
           <div className="p-4">
             <div className="flex items-start justify-between mb-2.5">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                     style={{ background: bg }}>
+                  style={{ background: bg }}>
                   <ChapterIcon icon={chapter.icon} accent={accent} size={16} />
                 </div>
                 <span className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight">{chapter.title}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0"
-                      style={{ background: bg, color: accent }}>
+                  style={{ background: bg, color: accent }}>
                   {progress.done}/{progress.total}
                 </span>
                 {/* Context menu */}
@@ -51,9 +51,9 @@ export default function ChapterCard({ chapter }) {
                   onClick={e => { e.stopPropagation(); setMenu(m => !m) }}
                 >
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <circle cx="7" cy="3" r="1" fill="currentColor"/>
-                    <circle cx="7" cy="7" r="1" fill="currentColor"/>
-                    <circle cx="7" cy="11" r="1" fill="currentColor"/>
+                    <circle cx="7" cy="3" r="1" fill="currentColor" />
+                    <circle cx="7" cy="7" r="1" fill="currentColor" />
+                    <circle cx="7" cy="11" r="1" fill="currentColor" />
                   </svg>
                 </button>
               </div>
