@@ -1,15 +1,28 @@
 import React, { useState, useEffect } from 'react'
+import { nanoid } from 'nanoid'
 import { useStore } from '../../store/useStore'
-import { Btn, Input, Textarea, ConfirmModal } from '../ui'
-import { QUEST_STATUS, QUEST_TYPE } from '../../utils/constants'
-import { getDependents } from '../../utils/graph'
-import { wouldCreateCycle } from '../../utils/graph'
+import { Btn, Input, Textarea } from '../ui'
+import { QUEST_STATUS } from '../../utils/constants'
+import { getDependents, wouldCreateCycle } from '../../utils/graph'
+import toast from 'react-hot-toast'
+
+const MAX_ATTACHMENT_BYTES = 900 * 1024
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = () => reject(new Error('Impossible de lire le fichier.'))
+    reader.readAsDataURL(file)
+  })
+}
 
 export default function QuestPanel() {
   const {
     quests, selectedQuestId, isPanelOpen, closePanel,
     updateQuest, completeQuest, uncompleteQuest, deleteQuest, redirectAndDeleteQuest,
     addDependency, removeDependency,
+    addQuestAttachments, removeQuestAttachment,
   } = useStore()
 
   const quest = quests.find(q => q.id === selectedQuestId)
@@ -38,7 +51,7 @@ export default function QuestPanel() {
     updateQuest(quest.id, {
       title: t || quest.title,
       description: desc,
-      xp: Math.max(0, Math.min(9999, parseInt(xp) || 0)),
+      xp: Math.max(0, Math.min(9999, Number.parseInt(xp, 10) || 0)),
       status: t && quest.status === QUEST_STATUS.DRAFT ? QUEST_STATUS.ACTIVE : quest.status,
     })
   }
@@ -60,6 +73,39 @@ export default function QuestPanel() {
     }
     setShowDelModal(false)
     setShowRedirect(false)
+  }
+
+  async function handleAttachmentUpload(e) {
+    if (!quest) return
+    const files = Array.from(e.target.files || [])
+    e.target.value = ''
+    if (files.length === 0) return
+
+    const accepted = []
+    for (const file of files) {
+      if (file.size > MAX_ATTACHMENT_BYTES) {
+        toast.error(`${file.name} depasse 900 Ko`)
+        continue
+      }
+      try {
+        const dataUrl = await fileToDataUrl(file)
+        accepted.push({
+          id: nanoid(),
+          name: file.name,
+          mimeType: file.type || 'application/octet-stream',
+          size: file.size,
+          dataUrl,
+          createdAt: Date.now(),
+        })
+      } catch {
+        toast.error(`Lecture impossible: ${file.name}`)
+      }
+    }
+
+    if (accepted.length > 0) {
+      addQuestAttachments(quest.id, accepted)
+      toast.success(`${accepted.length} fichier${accepted.length > 1 ? 's ajoutes' : ' ajoute'}`)
+    }
   }
 
   if (!isPanelOpen || !quest) return null
@@ -134,15 +180,51 @@ export default function QuestPanel() {
           />
 
           <div>
-            <label className="block text-xs text-gray-400 mb-1 font-medium">Points XP</label>
+            <label htmlFor="quest-xp" className="block text-xs text-gray-400 mb-1 font-medium">Points XP</label>
             <div className="flex items-center gap-2">
-              <input type="number" min="0" max="9999" value={xp}
+              <input id="quest-xp" type="number" min="0" max="9999" value={xp}
                 onChange={e => setXp(e.target.value)}
                 onBlur={saveField}
                 disabled={quest.status === QUEST_STATUS.DONE}
                 className="w-20 text-sm px-3 py-2 rounded-lg border border-gray-200 bg-white focus:border-purple-400 outline-none transition-colors"
               />
               <span className="text-xs text-gray-400">XP à la complétion</span>
+              <span className="text-xs text-teal-700">= {(Number.parseInt(xp, 10) || 0).toLocaleString()} EUR</span>
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-xs text-gray-400 font-medium">Fichiers & images</p>
+              <label className="text-xs px-2 py-1 rounded border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer text-gray-600">
+                + Ajouter
+                <input type="file" multiple className="hidden" onChange={handleAttachmentUpload} />
+              </label>
+            </div>
+
+            <div className="space-y-1.5">
+              {(quest.attachments || []).length === 0 && (
+                <p className="text-xs text-gray-300 italic">Aucun fichier joint</p>
+              )}
+
+              {(quest.attachments || []).map(att => (
+                <div key={att.id} className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 px-2 py-1.5">
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-700 truncate max-w-[150px]">{att.name}</p>
+                    <p className="text-[10px] text-gray-400">{Math.max(1, Math.round((att.size || 0) / 1024))} Ko</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <a href={att.dataUrl} target="_blank" rel="noreferrer"
+                      className="text-[10px] px-1.5 py-0.5 rounded border border-gray-200 text-gray-600 hover:bg-white">
+                      Ouvrir
+                    </a>
+                    <button type="button" onClick={() => removeQuestAttachment(quest.id, att.id)}
+                      className="text-[10px] px-1.5 py-0.5 rounded border border-red-200 text-red-600 hover:bg-red-50">
+                      Retirer
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 

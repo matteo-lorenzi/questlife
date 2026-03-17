@@ -66,11 +66,48 @@ Le binaire est genere dans `release/win-unpacked/`.
 
 ### Auto-update
 
-1. Configure l URL de mise a jour dans `electron/update-config.json`.
-2. Heberge le contenu de `release/` (au minimum `latest.yml` + le setup `.exe`) sur cette URL.
-3. Au lancement de l application installee, QuestLife verifie automatiquement les mises a jour.
+L auto-update permet a l application installee chez tes amis de recuperer les nouvelles versions sans reinstaller manuellement.
 
-Option: tu peux surcharger l URL via la variable d environnement `QUESTLIFE_UPDATE_URL`.
+#### Comment ca fonctionne
+
+1. QuestLife verifie les mises a jour au demarrage (en production, pas en mode dev).
+2. Si une version plus recente existe sur ton serveur, elle est telechargee automatiquement.
+3. Quand le telechargement est termine, l application propose de redemarrer pour installer la mise a jour.
+
+#### Configuration
+
+1. Definis l URL de mise a jour dans `electron/update-config.json`.
+2. Le dossier cible doit etre accessible en HTTP/HTTPS depuis les PC de tes amis.
+3. Optionnel: tu peux surcharger l URL avec la variable d environnement `QUESTLIFE_UPDATE_URL`.
+
+Exemple de config:
+
+```json
+{
+  "provider": "generic",
+  "url": "https://ton-domaine.com/questlife-updates"
+}
+```
+
+#### Comment publier une nouvelle version
+
+1. Augmente la version dans `package.json` (ex: `1.0.0` -> `1.0.1`).
+2. Genere la release:
+
+```bash
+npm run electron:build
+```
+
+3. Publie sur ton serveur de mises a jour les fichiers du dossier `release/`, au minimum:
+- `latest.yml`
+- `QuestLife Setup x.y.z.exe`
+
+4. Quand tes amis ouvrent QuestLife, la nouvelle version est detectee puis proposee au redemarrage.
+
+#### Important
+
+- Une modification locale de ton code ne se propage pas toute seule: il faut refaire un build et republier les artefacts.
+- Si l URL est invalide ou inaccessible, l app continue de fonctionner normalement, mais sans update.
 
 ## Initialiser un repo GitHub
 

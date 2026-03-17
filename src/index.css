@@ -3,63 +3,231 @@
 @tailwind utilities;
 
 @layer base {
-  * { box-sizing: border-box; }
+  * {
+    box-sizing: border-box;
+  }
   body {
-    background: #F8F8F6;
-    color: #1A1A18;
-    font-family: 'Inter', system-ui, sans-serif;
+    background: #f8f8f6;
+    color: #1a1a18;
+    font-family: "Inter", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #D3D1C7; border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: #B4B2A9; }
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #d3d1c7;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #b4b2a9;
+  }
 }
 
 /* React Flow overrides */
-.react-flow__background { background: #F8F8F6 !important; }
-.react-flow__edge-path { stroke-width: 2 !important; }
+.react-flow__background {
+  background: transparent !important;
+}
+.react-flow__edge-path {
+  stroke-width: 2 !important;
+}
 .react-flow__handle {
   width: 10px !important;
   height: 10px !important;
   border-radius: 50% !important;
   border: 2px solid white !important;
-  background: #1D9E75 !important;
+  background: #1d9e75 !important;
   opacity: 0;
   transition: opacity 0.15s;
 }
 .react-flow__node:hover .react-flow__handle,
-.react-flow__handle:hover { opacity: 1 !important; }
-.react-flow__handle-connecting { opacity: 1 !important; }
-.react-flow__minimap { border-radius: 8px; overflow: hidden; }
-.react-flow__controls { border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
-.react-flow__controls-button { background: white !important; border: none !important; border-bottom: 1px solid #E5E5E0 !important; }
-.react-flow__controls-button:last-child { border-bottom: none !important; }
-.react-flow__controls-button svg { fill: #5F5E5A !important; }
+.react-flow__handle:hover {
+  opacity: 1 !important;
+}
+.react-flow__handle-connecting {
+  opacity: 1 !important;
+}
+.react-flow__minimap {
+  border-radius: 8px;
+  overflow: hidden;
+}
+.react-flow__controls {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+.react-flow__controls-button {
+  background: white !important;
+  border: none !important;
+  border-bottom: 1px solid #e5e5e0 !important;
+}
+.react-flow__controls-button:last-child {
+  border-bottom: none !important;
+}
+.react-flow__controls-button svg {
+  fill: #5f5e5a !important;
+}
 
 /* Animations */
-@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes slideInRight { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
-@keyframes slideInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(29,158,117,0.3); } 70% { box-shadow: 0 0 0 8px rgba(29,158,117,0); } 100% { box-shadow: 0 0 0 0 rgba(29,158,117,0); } }
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(29, 158, 117, 0.3);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(29, 158, 117, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(29, 158, 117, 0);
+  }
+}
+@keyframes epic-shake {
+  0% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-1px);
+  }
+  40% {
+    transform: translateX(2px);
+  }
+  60% {
+    transform: translateX(-2px);
+  }
+  80% {
+    transform: translateX(1px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+@keyframes epic-slash {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.95);
+  }
+  35% {
+    opacity: 1;
+    transform: translateY(0) scale(1.06);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8px) scale(1);
+  }
+}
+@keyframes diploma-reveal {
+  0% {
+    opacity: 0;
+    transform: rotate(-1.5deg) scale(0.96);
+  }
+  60% {
+    opacity: 1;
+    transform: rotate(0.7deg) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+  }
+}
 
-.animate-fadeIn { animation: fadeIn 0.2s ease-out; }
-.animate-slideInRight { animation: slideInRight 0.2s ease-out; }
-.animate-slideInUp { animation: slideInUp 0.2s ease-out; }
-.animate-scaleIn { animation: scaleIn 0.15s ease-out; }
-.animate-pulseRing { animation: pulse-ring 1.5s ease-out infinite; }
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
+}
+.animate-slideInRight {
+  animation: slideInRight 0.2s ease-out;
+}
+.animate-slideInUp {
+  animation: slideInUp 0.2s ease-out;
+}
+.animate-scaleIn {
+  animation: scaleIn 0.15s ease-out;
+}
+.animate-pulseRing {
+  animation: pulse-ring 1.5s ease-out infinite;
+}
+.animate-epicShake {
+  animation: epic-shake 0.35s ease-in-out;
+}
+.animate-epicSlash {
+  animation: epic-slash 0.6s ease-out;
+}
+.animate-diplomaReveal {
+  animation: diploma-reveal 0.5s ease-out;
+}
 
 /* Node status styles */
-.quest-node-active .quest-node-body { border-color: #1D9E75 !important; }
-.quest-node-done .quest-node-body { background: #E1F5EE !important; border-color: #1D9E75 !important; }
-.quest-node-locked .quest-node-body { opacity: 0.65; border-style: dashed !important; }
-.quest-node-draft .quest-node-body { border-style: dashed !important; border-color: #B4B2A9 !important; }
-.quest-node-boss .quest-node-body { border-width: 2px !important; }
+.quest-node-active .quest-node-body {
+  border-color: #1d9e75 !important;
+}
+.quest-node-done .quest-node-body {
+  background: #e1f5ee !important;
+  border-color: #1d9e75 !important;
+}
+.quest-node-locked .quest-node-body {
+  opacity: 0.65;
+  border-style: dashed !important;
+}
+.quest-node-draft .quest-node-body {
+  border-style: dashed !important;
+  border-color: #b4b2a9 !important;
+}
+.quest-node-boss .quest-node-body {
+  border-width: 2px !important;
+}
 
 /* Edge animated */
 .react-flow__edge.animated .react-flow__edge-path {
   stroke-dasharray: 6;
   animation: dashdraw 0.8s linear infinite;
 }
-@keyframes dashdraw { from { stroke-dashoffset: 12; } to { stroke-dashoffset: 0; } }
+@keyframes dashdraw {
+  from {
+    stroke-dashoffset: 12;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}

@@ -6,9 +6,9 @@ import {
   DEFAULT_XP,
   BADGE_DEFS,
   getLevelFromXP,
-  XP_LEVELS,
+  WEEKLY_OBJECTIVES_POOL,
 } from "../utils/constants";
-import { recomputeStatuses, getDependents } from "../utils/graph";
+import { recomputeStatuses } from "../utils/graph";
 
 // ── LocalStorage persistence helper ──────────────────────────────────────────
 const LS_KEY = "questlife_data";
@@ -38,12 +38,67 @@ function saveState(state) {
   }
 }
 
+function emitToast(msg, type = "success") {
+  globalThis.dispatchEvent(
+    new CustomEvent("questlife:toast", { detail: { msg, type } }),
+  );
+}
+
+function getISODate(ts = Date.now()) {
+  return new Date(ts).toISOString().slice(0, 10);
+}
+
+function isSameISOWeek(isoDate, now = new Date()) {
+  const d = new Date(isoDate);
+  return getWeekKey(d) === getWeekKey(now);
+}
+
+function getWeekKey(date = new Date()) {
+  const d = new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+  );
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
+}
+
+function pickWeeklyObjectives() {
+  const pool = [...WEEKLY_OBJECTIVES_POOL];
+  const chosen = [];
+  while (pool.length > 0 && chosen.length < 4) {
+    const idx = Math.floor(Math.random() * pool.length);
+    chosen.push(pool.splice(idx, 1)[0]);
+  }
+  return chosen.map((o) => ({
+    id: o.id,
+    label: o.label,
+    bonusXP: o.bonusXP,
+    target: o.target,
+    type: o.type,
+    progress: 0,
+    done: false,
+  }));
+}
+
 // ── Default profile ───────────────────────────────────────────────────────────
 const defaultProfile = {
+  pseudo: "Aventurier",
   totalXP: 0,
   level: 1,
   badges: [],
   xpHistory: [],
+  streak: {
+    current: 0,
+    longest: 0,
+    lastActiveDate: null,
+  },
+  weeklyObjectives: {
+    weekKey: "",
+    objectives: [],
+  },
+  activityLog: [],
 };
 
 // ── Seed data ─────────────────────────────────────────────────────────────────
@@ -124,18 +179,37 @@ function seedData() {
 // ── Store ─────────────────────────────────────────────────────────────────────
 const saved = loadState();
 const initial = saved || seedData();
+const savedProfile = initial.profile || defaultProfile;
+const initialProfile = {
+  ...defaultProfile,
+  ...savedProfile,
+  streak: {
+    ...defaultProfile.streak,
+    ...(savedProfile.streak || {}),
+  },
+  weeklyObjectives: {
+    ...defaultProfile.weeklyObjectives,
+    ...(savedProfile.weeklyObjectives || {}),
+    objectives: savedProfile.weeklyObjectives?.objectives || [],
+  },
+  activityLog: savedProfile.activityLog || [],
+};
 
 export const useStore = create((set, get) => ({
   // ── State ──────────────────────────────────────────────────────────────────
   chapters: initial.chapters || [],
-  quests: initial.quests || [],
-  profile: initial.profile || defaultProfile,
+  quests: (initial.quests || []).map((q) => ({
+    ...q,
+    attachments: q.attachments || [],
+  })),
+  profile: initialProfile,
   canvasViewports: initial.canvasViewports || {},
 
   // UI state (not persisted)
   activeChapterId: null,
   selectedQuestId: null,
   isPanelOpen: false,
+  showProfile: false,
   showChapterModal: false,
   editingChapter: null, // chapter object being edited (null = new)
 
@@ -147,6 +221,14 @@ export const useStore = create((set, get) => ({
   // ── Chapters ───────────────────────────────────────────────────────────────
   setActiveChapter(id) {
     set({ activeChapterId: id, selectedQuestId: null, isPanelOpen: false });
+  },
+
+  openProfile() {
+    set({ showProfile: true });
+  },
+
+  closeProfile() {
+    set({ showProfile: false });
   },
 
   openChapterModal(chapter = null) {
@@ -208,11 +290,13 @@ export const useStore = create((set, get) => ({
       type,
       dependencies: [],
       position,
+      attachments: [],
       completedAt: null,
     };
     set((s) => ({ quests: [...s.quests, quest] }));
     set({ selectedQuestId: quest.id, isPanelOpen: true });
     get()._persist();
+    get().checkWeeklyObjectives({ questCreated: 1 });
     return quest.id;
   },
 
@@ -260,10 +344,26 @@ export const useStore = create((set, get) => ({
         { questId: id, xp: quest.xp, timestamp: Date.now() },
       ];
 
+      const today = getISODate();
+      const activityMap = new Map(
+        (profile.activityLog || []).map((item) => [item.date, item.count]),
+      );
+      activityMap.set(today, (activityMap.get(today) || 0) + 1);
+      profile.activityLog = [...activityMap.entries()]
+        .map(([date, count]) => ({ date, count }))
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .slice(-90);
+
       return { quests, profile };
     });
+    get().updateStreak();
+    get().checkWeeklyObjectives({ completedQuestId: id, earnedXP: quest.xp });
     get()._persist();
     get()._checkBadges();
+    emitToast(
+      `bravo ma reine - +${quest.xp} XP = +${quest.xp} EUR (versement virtuel)`,
+      "success",
+    );
   },
 
   uncompleteQuest(id) {
@@ -405,6 +505,37 @@ export const useStore = create((set, get) => ({
     get()._persist();
   },
 
+  addQuestAttachments(id, attachments) {
+    if (!attachments || attachments.length === 0) return;
+    set((s) => ({
+      quests: s.quests.map((q) =>
+        q.id === id
+          ? {
+              ...q,
+              attachments: [...(q.attachments || []), ...attachments],
+            }
+          : q,
+      ),
+    }));
+    get()._persist();
+  },
+
+  removeQuestAttachment(id, attachmentId) {
+    set((s) => ({
+      quests: s.quests.map((q) =>
+        q.id === id
+          ? {
+              ...q,
+              attachments: (q.attachments || []).filter(
+                (a) => a.id !== attachmentId,
+              ),
+            }
+          : q,
+      ),
+    }));
+    get()._persist();
+  },
+
   // ── Panel ──────────────────────────────────────────────────────────────────
   selectQuest(id) {
     set({ selectedQuestId: id, isPanelOpen: !!id });
@@ -421,10 +552,161 @@ export const useStore = create((set, get) => ({
     get()._persist();
   },
 
+  // ── Profile ───────────────────────────────────────────────────────────────
+  updatePseudo(pseudo) {
+    const value = (pseudo || "").trim();
+    if (!/^[A-Za-z0-9_-]{2,20}$/.test(value)) {
+      emitToast(
+        "Pseudo invalide: 2-20 caractères (lettres, chiffres, _ ou -)",
+        "error",
+      );
+      return false;
+    }
+    set((s) => ({ profile: { ...s.profile, pseudo: value } }));
+    get()._persist();
+    emitToast("Pseudo mis à jour", "success");
+    return true;
+  },
+
+  getWeeklyObjectives() {
+    const weekKey = getWeekKey(new Date());
+    const profile = get().profile;
+    if (profile.weeklyObjectives?.weekKey === weekKey) {
+      return profile.weeklyObjectives.objectives || [];
+    }
+
+    const objectives = pickWeeklyObjectives();
+    set((s) => ({
+      profile: {
+        ...s.profile,
+        weeklyObjectives: {
+          weekKey,
+          objectives,
+        },
+      },
+    }));
+    get()._persist();
+    return objectives;
+  },
+
+  updateStreak() {
+    const today = getISODate();
+    set((s) => {
+      const streak = {
+        ...defaultProfile.streak,
+        ...s.profile.streak,
+      };
+
+      if (streak.lastActiveDate === today) {
+        return {};
+      }
+
+      if (streak.lastActiveDate) {
+        const prev = new Date(`${streak.lastActiveDate}T00:00:00`);
+        const next = new Date(prev);
+        next.setDate(prev.getDate() + 1);
+        if (getISODate(next.getTime()) === today) {
+          streak.current += 1;
+        } else {
+          streak.current = 1;
+        }
+      } else {
+        streak.current = 1;
+      }
+
+      streak.lastActiveDate = today;
+      streak.longest = Math.max(streak.longest || 0, streak.current || 0);
+      return { profile: { ...s.profile, streak } };
+    });
+    get()._persist();
+  },
+
+  checkWeeklyObjectives(payload = {}) {
+    const objectives = get().getWeeklyObjectives();
+    const { quests, chapters, profile } = get();
+    if (!objectives || objectives.length === 0) return;
+
+    const nowWeekKey = getWeekKey(new Date());
+    const questCompletionsThisWeek = (profile.xpHistory || []).filter(
+      (h) => h.questId && isSameISOWeek(getISODate(h.timestamp)),
+    ).length;
+    const weeklyXP = (profile.xpHistory || [])
+      .filter((h) => isSameISOWeek(getISODate(h.timestamp)))
+      .reduce((sum, h) => sum + h.xp, 0);
+    const chapterDoneCount = chapters.filter((ch) => {
+      const chapterQuests = quests.filter(
+        (q) => q.chapterId === ch.id && q.status !== QUEST_STATUS.DRAFT,
+      );
+      return (
+        chapterQuests.length > 0 &&
+        chapterQuests.every((q) => q.status === QUEST_STATUS.DONE)
+      );
+    }).length;
+
+    let bonusAwarded = 0;
+    const updatedObjectives = objectives.map((obj) => {
+      let progress = obj.progress || 0;
+      if (obj.type === "questCount") progress = questCompletionsThisWeek;
+      if (obj.type === "streak") progress = profile.streak?.current || 0;
+      if (obj.type === "bossQuest") {
+        const hasBossThisWeek = (profile.xpHistory || []).some((h) => {
+          if (!isSameISOWeek(getISODate(h.timestamp))) return false;
+          const quest = quests.find((q) => q.id === h.questId);
+          return quest?.type === QUEST_TYPE.BOSS;
+        });
+        progress = hasBossThisWeek ? 1 : 0;
+      }
+      if (obj.type === "chapterDone") progress = chapterDoneCount;
+      if (obj.type === "weeklyXP") progress = weeklyXP;
+      if (obj.type === "questCreated")
+        progress = (obj.progress || 0) + (payload.questCreated || 0);
+
+      const clampedProgress = Math.min(obj.target, progress);
+      const doneNow = clampedProgress >= obj.target;
+      if (doneNow && !obj.done) {
+        bonusAwarded += obj.bonusXP;
+      }
+      return {
+        ...obj,
+        progress: clampedProgress,
+        done: obj.done || doneNow,
+      };
+    });
+
+    set((s) => {
+      const nextProfile = {
+        ...s.profile,
+        weeklyObjectives: {
+          weekKey: nowWeekKey,
+          objectives: updatedObjectives,
+        },
+      };
+
+      if (bonusAwarded > 0) {
+        nextProfile.totalXP += bonusAwarded;
+        nextProfile.level = getLevelFromXP(nextProfile.totalXP).level;
+        nextProfile.xpHistory = [
+          ...(nextProfile.xpHistory || []),
+          {
+            questId: null,
+            xp: bonusAwarded,
+            timestamp: Date.now(),
+          },
+        ];
+      }
+
+      return { profile: nextProfile };
+    });
+
+    if (bonusAwarded > 0) {
+      emitToast(`Objectifs hebdo validés: +${bonusAwarded} XP`, "success");
+    }
+    get()._persist();
+  },
+
   // ── Badge checker ──────────────────────────────────────────────────────────
   _checkBadges() {
     const s = get();
-    const chapterQuests = s.quests.filter((q) => q.chapterId);
     const totalCompleted = s.quests.filter(
       (q) => q.status === QUEST_STATUS.DONE,
     ).length;
@@ -472,7 +754,9 @@ export const useStore = create((set, get) => ({
       get()._persist();
       // Emit custom event so toast can pick it up
       for (const b of newBadges) {
-        window.dispatchEvent(new CustomEvent("questlife:badge", { detail: b }));
+        globalThis.dispatchEvent(
+          new CustomEvent("questlife:badge", { detail: b }),
+        );
       }
     }
   },

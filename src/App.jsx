@@ -1,17 +1,26 @@
 import React, { useEffect } from 'react'
-import { Toaster } from 'react-hot-toast'
-import toast from 'react-hot-toast'
+import toast, { Toaster } from 'react-hot-toast'
 import { useStore } from './store/useStore'
 import HomePage from './components/layout/HomePage'
 import CanvasView from './components/layout/CanvasView'
 import ChapterHeader from './components/layout/ChapterHeader'
 import ChapterModal from './components/chapters/ChapterModal'
+import ProfilePage from './components/profile/ProfilePage'
 
 export default function App() {
   const { chapters, activeChapterId } = useStore()
   const activeChapter = chapters.find(c => c.id === activeChapterId)
 
   useEffect(() => {
+    function onToast(e) {
+      const type = e?.detail?.type || 'success'
+      const msg = e?.detail?.msg || ''
+      if (!msg) return
+      if (type === 'error') toast.error(msg)
+      else if (type === 'success') toast.success(msg)
+      else toast(msg)
+    }
+
     function onBadge(e) {
       toast.custom((t) => (
         <div className={`flex items-center gap-3 bg-white border border-amber-200 rounded-xl px-4 py-3 shadow-lg ${t.visible ? 'animate-slideInUp' : 'opacity-0'}`}>
@@ -28,8 +37,12 @@ export default function App() {
         </div>
       ), { duration: 4000 })
     }
-    window.addEventListener('questlife:badge', onBadge)
-    return () => window.removeEventListener('questlife:badge', onBadge)
+    globalThis.addEventListener('questlife:toast', onToast)
+    globalThis.addEventListener('questlife:badge', onBadge)
+    return () => {
+      globalThis.removeEventListener('questlife:toast', onToast)
+      globalThis.removeEventListener('questlife:badge', onBadge)
+    }
   }, [])
 
   return (
@@ -43,6 +56,7 @@ export default function App() {
         <HomePage />
       )}
       <ChapterModal />
+      <ProfilePage />
       <Toaster position="top-right"
         toastOptions={{
           style: { background: 'white', border: '1px solid #E5E5E0', borderRadius: 12, fontSize: 13 },
