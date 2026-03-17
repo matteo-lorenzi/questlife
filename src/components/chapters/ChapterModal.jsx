@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react'
 import { useStore } from '../../store/useStore'
 import { Modal, Btn, Input, Textarea } from '../ui'
 import ChapterIcon from '../../assets/icons/ChapterIcon'
-import { CHAPTER_COLORS, CHAPTER_ICONS } from '../../utils/constants'
+import { CHAPTER_COLORS, CHAPTER_ICONS, getChapterBg } from '../../utils/constants'
 
 const ICONS = Object.keys(CHAPTER_ICONS)
 
 export default function ChapterModal() {
-  const { showChapterModal, editingChapter, closeChapterModal, createChapter, updateChapter, setActiveChapter } = useStore()
+  const { showChapterModal, editingChapter, closeChapterModal, createChapter, updateChapter, setActiveChapter, theme } = useStore()
 
   const [name, setName]       = useState('')
   const [desc, setDesc]       = useState('')
@@ -33,7 +33,12 @@ export default function ChapterModal() {
 
   function handleSubmit() {
     if (!name.trim()) { setNameErr('Un nom est requis'); return }
-    const data = { title: name.trim(), description: desc.trim(), color: { bg: color.bg, accent: color.accent }, icon }
+    const data = {
+      title: name.trim(),
+      description: desc.trim(),
+      color: { bg: color.bg, bgDark: color.bgDark, accent: color.accent },
+      icon,
+    }
     if (isEdit) {
       updateChapter(editingChapter.id, data)
       closeChapterModal()
@@ -52,7 +57,7 @@ export default function ChapterModal() {
         {/* Preview + name */}
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors duration-200"
-               style={{ background: color.bg }}>
+            style={{ background: getChapterBg(color, theme) }}>
             <ChapterIcon icon={icon} accent={color.accent} size={24} />
           </div>
           <Input label="Nom du chapitre" value={name} onChange={e => { setName(e.target.value); setNameErr('') }}
@@ -90,7 +95,7 @@ export default function ChapterModal() {
               <button key={key} onClick={() => setIcon(key)}
                 className="w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-150 border"
                 style={{
-                  background: icon === key ? color.bg : '#F8F8F6',
+                  background: icon === key ? getChapterBg(color, theme) : '#F8F8F6',
                   borderColor: icon === key ? color.accent : '#E5E5E0',
                   borderWidth: icon === key ? '1.5px' : '1px',
                 }}

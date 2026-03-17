@@ -5,7 +5,7 @@ import { Btn, ProgressBar } from '../ui'
 import { getLevelFromXP, getNextLevel } from '../../utils/constants'
 
 export default function HomePage() {
-  const { chapters, profile, openChapterModal, openProfile } = useStore()
+  const { chapters, profile, openChapterModal, openProfile, toggleTheme, theme } = useStore()
   const level = getLevelFromXP(profile.totalXP)
   const next = getNextLevel(level.level)
   const pct = next
@@ -17,14 +17,14 @@ export default function HomePage() {
   return (
     <div className="flex flex-col h-full">
       {/* Top bar */}
-      <header className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between flex-shrink-0">
+      <header className="bg-white dark:bg-zinc-900 border-b border-gray-100 dark:border-zinc-800 px-6 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <polygon points="7,1 9,5 13,5.5 10,8.5 11,13 7,10.5 3,13 4,8.5 1,5.5 5,5" fill="#7F77DD" />
             </svg>
           </div>
-          <span className="text-sm font-medium text-gray-900">QuestLife</span>
+          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">QuestLife</span>
         </div>
 
         {/* XP profile */}
@@ -32,9 +32,22 @@ export default function HomePage() {
           <Btn size="sm" variant="default" onClick={openProfile}>
             Mon compte
           </Btn>
+          <Btn size="sm" variant="default" onClick={toggleTheme}>
+            {theme === 'dark' ? (
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <circle cx="6" cy="6" r="2.3" stroke="currentColor" strokeWidth="1.2" />
+                <path d="M6 0.9V2M6 10V11.1M0.9 6H2M10 6H11.1M1.8 1.8L2.6 2.6M9.4 9.4L10.2 10.2M10.2 1.8L9.4 2.6M2.6 9.4L1.8 10.2" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+              </svg>
+            ) : (
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M10.4 7.2A4.6 4.6 0 1 1 4.8 1.6a4.1 4.1 0 0 0 5.6 5.6Z" stroke="currentColor" strokeWidth="1.2" fill="none" />
+              </svg>
+            )}
+            {theme === 'dark' ? 'Clair' : 'Sombre'}
+          </Btn>
           <div className="text-right hidden sm:block">
-            <p className="text-xs text-gray-400">{level.label}</p>
-            <p className="text-xs font-medium text-gray-700">{profile.totalXP.toLocaleString()} XP</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">{level.label}</p>
+            <p className="text-xs font-medium text-gray-700 dark:text-gray-200">{profile.totalXP.toLocaleString()} XP</p>
             <p className="text-xs text-teal-700">{profile.totalXP.toLocaleString()} EUR virtuels</p>
           </div>
           <div className="flex items-center gap-2">
@@ -57,13 +70,13 @@ export default function HomePage() {
       </header>
 
       {/* Content */}
-      <main className="flex-1 overflow-y-auto p-6">
+      <main className="flex-1 overflow-y-auto p-6 bg-gray-50 dark:bg-zinc-950">
         <div className="max-w-3xl mx-auto">
           {/* Section header */}
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h1 className="text-base font-medium text-gray-900">Mes chapitres</h1>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <h1 className="text-base font-medium text-gray-900 dark:text-gray-100">Mes chapitres</h1>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                 {active.length} chapitre{active.length !== 1 ? 's' : ''}
               </p>
             </div>

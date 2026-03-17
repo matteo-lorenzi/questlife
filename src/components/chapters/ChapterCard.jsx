@@ -4,20 +4,22 @@ import { ProgressBar } from '../ui'
 import ChapterIcon from '../../assets/icons/ChapterIcon'
 import { getChapterProgress } from '../../utils/graph'
 import { ConfirmModal } from '../ui'
+import { getChapterBg } from '../../utils/constants'
 
 export default function ChapterCard({ chapter }) {
-  const { quests, setActiveChapter, deleteChapter, openChapterModal } = useStore()
+  const { quests, setActiveChapter, deleteChapter, openChapterModal, theme } = useStore()
   const [menu, setMenu]         = useState(false)
   const [confirmDel, setConfirm] = useState(false)
 
   const cq       = quests.filter(q => q.chapterId === chapter.id)
   const progress = getChapterProgress(cq)
-  const { bg, accent } = chapter.color
+  const accent = chapter.color.accent
+  const bg = getChapterBg(chapter.color, theme)
 
   return (
     <>
       <div
-        className="relative bg-white rounded-xl border transition-all duration-200 cursor-pointer group"
+        className="relative bg-white dark:bg-zinc-900 rounded-xl border transition-all duration-200 cursor-pointer group"
         style={{ borderColor: '#E5E5E0', borderWidth: '1px' }}
         onMouseEnter={e => e.currentTarget.style.borderColor = accent}
         onMouseLeave={e => e.currentTarget.style.borderColor = '#E5E5E0'}
@@ -36,7 +38,7 @@ export default function ChapterCard({ chapter }) {
                      style={{ background: bg }}>
                   <ChapterIcon icon={chapter.icon} accent={accent} size={16} />
                 </div>
-                <span className="text-sm font-medium text-gray-900 leading-tight">{chapter.title}</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight">{chapter.title}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0"
@@ -58,7 +60,7 @@ export default function ChapterCard({ chapter }) {
             </div>
 
             {chapter.description && (
-              <p className="text-xs text-gray-400 mb-3 leading-relaxed line-clamp-2">{chapter.description}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-3 leading-relaxed line-clamp-2">{chapter.description}</p>
             )}
 
             <ProgressBar pct={progress.pct} accent={accent} height={4} className="mb-2" />

@@ -2,11 +2,11 @@ import React, { useMemo, useState } from 'react'
 import { useStore } from '../../store/useStore'
 import { ProgressBar, Btn, Modal } from '../ui'
 import { getChapterProgress } from '../../utils/graph'
-import { QUEST_STATUS, CANVAS_BACKGROUNDS } from '../../utils/constants'
+import { QUEST_STATUS, CANVAS_BACKGROUNDS, getChapterBg } from '../../utils/constants'
 import ChapterSwitcher from '../navigation/ChapterSwitcher'
 
 export default function ChapterHeader({ chapter }) {
-  const { quests, setActiveChapter, openChapterModal, updateChapter } = useStore()
+  const { quests, setActiveChapter, openChapterModal, updateChapter, theme } = useStore()
   const [showFight, setShowFight] = useState(false)
   const [showDiploma, setShowDiploma] = useState(false)
   const [showBackgroundBank, setShowBackgroundBank] = useState(false)
@@ -40,7 +40,7 @@ export default function ChapterHeader({ chapter }) {
   }
 
   return (
-    <div className="flex-shrink-0 bg-white border-b border-gray-100">
+    <div className="flex-shrink-0 bg-white dark:bg-zinc-900 border-b border-gray-100 dark:border-zinc-800">
       <div className="flex items-center justify-between px-4 py-3 gap-4">
         <div className="flex items-center gap-2 min-w-0">
           <button onClick={() => setActiveChapter(null)}
@@ -77,10 +77,10 @@ export default function ChapterHeader({ chapter }) {
           </Btn>
         </div>
       </div>
-      <div className="flex items-center gap-4 px-4 py-1.5 bg-gray-50 border-t border-gray-100 text-xs">
-        <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-teal-400" /><span className="text-gray-500">{done} complétée{done !== 1 ? 's' : ''}</span></div>
-        <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-amber-200" /><span className="text-gray-500">{active} en cours</span></div>
-        <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full border border-dashed border-gray-300" /><span className="text-gray-500">{locked} verrouillée{locked !== 1 ? 's' : ''}</span></div>
+      <div className="flex items-center gap-4 px-4 py-1.5 bg-gray-50 dark:bg-zinc-950 border-t border-gray-100 dark:border-zinc-800 text-xs">
+        <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-teal-400" /><span className="text-gray-500 dark:text-gray-400">{done} complétée{done !== 1 ? 's' : ''}</span></div>
+        <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-amber-200" /><span className="text-gray-500 dark:text-gray-400">{active} en cours</span></div>
+        <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full border border-dashed border-gray-300 dark:border-zinc-600" /><span className="text-gray-500 dark:text-gray-400">{locked} verrouillée{locked !== 1 ? 's' : ''}</span></div>
         <div className="ml-auto flex items-center gap-1">
           <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><polygon points="5,0.8 6.5,4 9.8,4.3 7.3,6.5 8,9.5 5,8 2,9.5 2.7,6.5 0.2,4.3 3.5,4" fill="#EF9F27" /></svg>
           <span className="text-amber-800 font-medium">{xpGained.toLocaleString()} XP ({xpGained.toLocaleString()} EUR virtuels)</span>
@@ -114,7 +114,7 @@ export default function ChapterHeader({ chapter }) {
       <Modal open={showDiploma} onClose={() => setShowDiploma(false)} title="Diplome de chapitre" width="max-w-lg">
         <div className="px-5 py-5">
           <div className="rounded-xl border-2 p-5 animate-diplomaReveal"
-            style={{ borderColor: chapter.color.accent, background: chapter.color.bg }}>
+            style={{ borderColor: chapter.color.accent, background: getChapterBg(chapter.color, theme) }}>
             <p className="text-xs uppercase tracking-wider" style={{ color: chapter.color.accent }}>QuestLife Academy</p>
             <h3 className="text-lg font-semibold mt-2 text-gray-900">Certificat de reussite</h3>
             <p className="text-sm text-gray-700 mt-3">Ce diplome atteste que ce chapitre est complete a 100%.</p>

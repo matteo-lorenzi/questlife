@@ -7,6 +7,7 @@ import {
   BADGE_DEFS,
   getLevelFromXP,
   WEEKLY_OBJECTIVES_POOL,
+  CHAPTER_COLORS,
 } from "../utils/constants";
 import { recomputeStatuses } from "../utils/graph";
 
@@ -42,6 +43,13 @@ function emitToast(msg, type = "success") {
   globalThis.dispatchEvent(
     new CustomEvent("questlife:toast", { detail: { msg, type } }),
   );
+}
+
+function getInitialTheme() {
+  const savedTheme = localStorage.getItem("questlife_theme");
+  if (savedTheme === "light" || savedTheme === "dark") return savedTheme;
+  const prefersDark = globalThis.matchMedia?.("(prefers-color-scheme: dark)")?.matches;
+  return prefersDark ? "dark" : "light";
 }
 
 function getISODate(ts = Date.now()) {
@@ -114,7 +122,11 @@ function seedData() {
         id: chapterId,
         title: "Santé & Sport",
         description: "Objectifs physiques et bien-être",
-        color: { bg: "#E1F5EE", accent: "#1D9E75" },
+        color: {
+          bg: CHAPTER_COLORS[0].bg,
+          bgDark: CHAPTER_COLORS[0].bgDark,
+          accent: CHAPTER_COLORS[0].accent,
+        },
         icon: "health",
         order: 0,
         createdAt: Date.now(),
@@ -197,7 +209,18 @@ const initialProfile = {
 
 export const useStore = create((set, get) => ({
   // ── State ──────────────────────────────────────────────────────────────────
-  chapters: initial.chapters || [],
+  chapters: (initial.chapters || []).map((ch) => {
+    if (ch.color?.bgDark) return ch;
+    const colorDef = CHAPTER_COLORS.find((c) => c.accent === ch.color?.accent);
+    return {
+      ...ch,
+      color: {
+        bg: ch.color?.bg || colorDef?.bg || CHAPTER_COLORS[0].bg,
+        bgDark: colorDef?.bgDark || CHAPTER_COLORS[0].bgDark,
+        accent: ch.color?.accent || colorDef?.accent || CHAPTER_COLORS[0].accent,
+      },
+    };
+  }),
   quests: (initial.quests || []).map((q) => ({
     ...q,
     attachments: q.attachments || [],
@@ -212,6 +235,7 @@ export const useStore = create((set, get) => ({
   showProfile: false,
   showChapterModal: false,
   editingChapter: null, // chapter object being edited (null = new)
+  theme: getInitialTheme(),
 
   // ── Persist helper ─────────────────────────────────────────────────────────
   _persist() {
@@ -227,6 +251,13 @@ export const useStore = create((set, get) => ({
     set({ showProfile: true });
   },
 
+  toggleTheme() {
+    const next = get().theme === "light" ? "dark" : "light";
+    globalThis.document?.documentElement.classList.toggle("dark", next === "dark");
+    localStorage.setItem("questlife_theme", next);
+    set({ theme: next });
+  },
+
   closeProfile() {
     set({ showProfile: false });
   },
@@ -239,12 +270,18 @@ export const useStore = create((set, get) => ({
   },
 
   createChapter(data) {
+    const colorDef = CHAPTER_COLORS.find((c) => c.accent === data?.color?.accent);
     const chapter = {
       id: nanoid(),
       order: get().chapters.length,
       createdAt: Date.now(),
       archivedAt: null,
       ...data,
+      color: {
+        bg: data?.color?.bg || colorDef?.bg || CHAPTER_COLORS[0].bg,
+        bgDark: data?.color?.bgDark || colorDef?.bgDark || CHAPTER_COLORS[0].bgDark,
+        accent: data?.color?.accent || colorDef?.accent || CHAPTER_COLORS[0].accent,
+      },
     };
     set((s) => ({ chapters: [...s.chapters, chapter] }));
     get()._persist();
@@ -254,8 +291,28 @@ export const useStore = create((set, get) => ({
   },
 
   updateChapter(id, data) {
+    const colorDef = CHAPTER_COLORS.find((c) => c.accent === data?.color?.accent);
     set((s) => ({
-      chapters: s.chapters.map((c) => (c.id === id ? { ...c, ...data } : c)),
+      chapters: s.chapters.map((c) =>
+        c.id === id
+          ? {
+              ...c,
+              ...data,
+              color: data?.color
+                ? {
+                    bg: data.color.bg || colorDef?.bg || c.color?.bg || CHAPTER_COLORS[0].bg,
+                    bgDark:
+                      data.color.bgDark ||
+                      colorDef?.bgDark ||
+                      c.color?.bgDark ||
+                      CHAPTER_COLORS[0].bgDark,
+                    accent:
+                      data.color.accent || colorDef?.accent || c.color?.accent || CHAPTER_COLORS[0].accent,
+                  }
+                : c.color,
+            }
+          : c,
+      ),
     }));
     get()._persist();
   },

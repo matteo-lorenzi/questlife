@@ -7,6 +7,11 @@ import ChapterHeader from './components/layout/ChapterHeader'
 import ChapterModal from './components/chapters/ChapterModal'
 import ProfilePage from './components/profile/ProfilePage'
 
+const savedTheme = localStorage.getItem('questlife_theme')
+const prefersDark = globalThis.matchMedia?.('(prefers-color-scheme: dark)')?.matches
+const initialTheme = savedTheme ?? (prefersDark ? 'dark' : 'light')
+globalThis.document?.documentElement.classList.toggle('dark', initialTheme === 'dark')
+
 export default function App() {
   const { chapters, activeChapterId } = useStore()
   const activeChapter = chapters.find(c => c.id === activeChapterId)
@@ -46,7 +51,7 @@ export default function App() {
   }, [])
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-gray-50">
+    <div className="h-screen flex flex-col overflow-hidden bg-gray-50 dark:bg-zinc-950">
       {activeChapter ? (
         <>
           <ChapterHeader chapter={activeChapter} />

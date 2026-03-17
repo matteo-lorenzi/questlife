@@ -3,9 +3,10 @@ import { useStore } from '../../store/useStore'
 import ChapterIcon from '../../assets/icons/ChapterIcon'
 import { getChapterProgress } from '../../utils/graph'
 import { ProgressBar } from '../ui'
+import { getChapterBg } from '../../utils/constants'
 
 export default function ChapterSwitcher({ chapter }) {
-  const { chapters, quests, setActiveChapter, openChapterModal } = useStore()
+  const { chapters, quests, setActiveChapter, openChapterModal, theme } = useStore()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const ref = useRef(null)
@@ -24,7 +25,7 @@ export default function ChapterSwitcher({ chapter }) {
     <div className="relative" ref={ref}>
       <button onClick={() => { setOpen(o => !o); setSearch('') }}
         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-transparent hover:border-gray-200 hover:bg-gray-50 transition-all duration-150">
-        <div className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0" style={{ background: chapter.color.bg }}>
+        <div className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0" style={{ background: getChapterBg(chapter.color, theme) }}>
           <ChapterIcon icon={chapter.icon} accent={chapter.color.accent} size={12} />
         </div>
         <span className="text-sm font-medium text-gray-900 max-w-[160px] truncate">{chapter.title}</span>
@@ -47,8 +48,8 @@ export default function ChapterSwitcher({ chapter }) {
               return (
                 <button key={ch.id} onClick={() => { setActiveChapter(ch.id); setOpen(false) }}
                   className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 transition-colors text-left"
-                  style={{ background: isCurrent ? ch.color.bg : undefined }}>
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: isCurrent ? ch.color.bg : '#F5F5F2' }}>
+                  style={{ background: isCurrent ? getChapterBg(ch.color, theme) : undefined }}>
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: isCurrent ? getChapterBg(ch.color, theme) : '#F5F5F2' }}>
                     <ChapterIcon icon={ch.icon} accent={ch.color.accent} size={14} />
                   </div>
                   <div className="flex-1 min-w-0">

@@ -1,14 +1,68 @@
 // ── Chapter colors ────────────────────────────────────────────────────────────
 export const CHAPTER_COLORS = [
-  { id: "teal", bg: "#E1F5EE", accent: "#1D9E75", name: "Vert" },
-  { id: "blue", bg: "#E6F1FB", accent: "#378ADD", name: "Bleu" },
-  { id: "purple", bg: "#EEEDFE", accent: "#7F77DD", name: "Violet" },
-  { id: "amber", bg: "#FAEEDA", accent: "#EF9F27", name: "Ambre" },
-  { id: "coral", bg: "#FAECE7", accent: "#D85A30", name: "Corail" },
-  { id: "pink", bg: "#FBEAF0", accent: "#D4537E", name: "Rose" },
-  { id: "red", bg: "#FCEBEB", accent: "#E24B4A", name: "Rouge" },
-  { id: "gray", bg: "#F1EFE8", accent: "#888780", name: "Gris" },
+  {
+    id: "teal",
+    bg: "#E1F5EE",
+    bgDark: "#0A2E22",
+    accent: "#1D9E75",
+    name: "Vert",
+  },
+  {
+    id: "blue",
+    bg: "#E6F1FB",
+    bgDark: "#0C1E35",
+    accent: "#378ADD",
+    name: "Bleu",
+  },
+  {
+    id: "purple",
+    bg: "#EEEDFE",
+    bgDark: "#16143A",
+    accent: "#7F77DD",
+    name: "Violet",
+  },
+  {
+    id: "amber",
+    bg: "#FAEEDA",
+    bgDark: "#2E1E06",
+    accent: "#EF9F27",
+    name: "Ambre",
+  },
+  {
+    id: "coral",
+    bg: "#FAECE7",
+    bgDark: "#2E0F06",
+    accent: "#D85A30",
+    name: "Corail",
+  },
+  {
+    id: "pink",
+    bg: "#FBEAF0",
+    bgDark: "#2E0A18",
+    accent: "#D4537E",
+    name: "Rose",
+  },
+  {
+    id: "red",
+    bg: "#FCEBEB",
+    bgDark: "#2E0808",
+    accent: "#E24B4A",
+    name: "Rouge",
+  },
+  {
+    id: "gray",
+    bg: "#F1EFE8",
+    bgDark: "#1C1C1A",
+    accent: "#888780",
+    name: "Gris",
+  },
 ];
+
+export function getChapterBg(color, theme = "light") {
+  if (!color) return theme === "dark" ? "#1C1C1A" : "#F1EFE8";
+  if (theme === "dark") return color.bgDark || "#1C1C1A";
+  return color.bg;
+}
 
 // ── Chapter icons ─────────────────────────────────────────────────────────────
 export const CHAPTER_ICONS = {
