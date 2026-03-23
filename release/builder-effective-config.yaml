@@ -9,6 +9,7 @@ files:
       - electron/**/*
       - package.json
 win:
+  artifactName: ${productName} Setup ${version}.${ext}
   target:
     - target: nsis
       arch:
