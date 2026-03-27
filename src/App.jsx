@@ -16,6 +16,35 @@ export default function App() {
   const { chapters, activeChapterId } = useStore()
   const activeChapter = chapters.find(c => c.id === activeChapterId)
 
+  async function sendDesktopNotification(title, body) {
+    if (!body) return false
+
+    if (typeof globalThis.questlifeNotify === 'function') {
+      try {
+        const result = await globalThis.questlifeNotify({ title, body })
+        if (result?.ok) return true
+      } catch {
+        // Fallback below when Electron bridge is not available/fails.
+      }
+    }
+
+    if (!('Notification' in globalThis)) return false
+
+    try {
+      let permission = globalThis.Notification.permission
+      if (permission === 'default') {
+        permission = await globalThis.Notification.requestPermission()
+      }
+      if (permission !== 'granted') return false
+
+      // Browser fallback (also works in non-Electron dev mode).
+      new globalThis.Notification(title, { body })
+      return true
+    } catch {
+      return false
+    }
+  }
+
   useEffect(() => {
     function onToast(e) {
       const type = e?.detail?.type || 'success'
@@ -47,9 +76,7 @@ export default function App() {
       const title = e?.detail?.title || 'QuestLife'
       const body = e?.detail?.body || ''
       if (!body) return
-      if (typeof globalThis.questlifeNotify === 'function') {
-        globalThis.questlifeNotify({ title, body })
-      }
+      void sendDesktopNotification(title, body)
     }
 
     function runDeadlineChecks() {

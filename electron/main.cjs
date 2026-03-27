@@ -11,6 +11,8 @@ const path = require("node:path");
 
 const isDev = !app.isPackaged;
 
+app.setAppUserModelId("com.questlife.app");
+
 function readUpdateConfig() {
   const configPath = path.join(__dirname, "update-config.json");
 
