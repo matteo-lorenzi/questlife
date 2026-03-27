@@ -7,6 +7,7 @@ const STATUS_STYLE = {
   draft: { border: '#B4B2A9', bg: '#FAFAF8', text: '#888780' },
   locked: { border: '#B4B2A9', bg: '#F5F5F2', text: '#888780' },
   active: { border: '#EF9F27', bg: '#FFFDF7', text: '#412402' },
+  expired: { border: '#E24B4A', bg: '#FCEBEB', text: '#8E2222' },
   done: { border: '#1D9E75', bg: '#F0FBF6', text: '#085041' },
 }
 
@@ -24,6 +25,10 @@ function QuestNode({ id, data, selected }) {
   const st = STATUS_STYLE[quest.status] || STATUS_STYLE.locked
   const badge = TYPE_BADGE[quest.type]
   const isSelected = selected || selectedQuestId === id
+  const now = Date.now()
+  const hasDeadline = Number.isFinite(quest.deadlineAt)
+  const minutesLeft = hasDeadline ? Math.max(0, Math.floor((quest.deadlineAt - now) / 60000)) : null
+  const isNearDeadline = hasDeadline && quest.status !== QUEST_STATUS.DONE && quest.status !== QUEST_STATUS.EXPIRED && minutesLeft <= 60
 
   return (
     <div
@@ -57,6 +62,7 @@ function QuestNode({ id, data, selected }) {
                   e.stopPropagation()
                   completeQuest(quest.id)
                 }}
+                disabled={quest.status === QUEST_STATUS.EXPIRED}
                 className="w-5 h-5 rounded-full border border-teal-300 bg-teal-50 text-teal-700 hover:bg-teal-100 transition-colors flex items-center justify-center"
                 title="Valider rapidement"
               >
@@ -77,6 +83,13 @@ function QuestNode({ id, data, selected }) {
                 <path d="M3 5V3.5C3 2.1 7 2.1 7 3.5V5" stroke="#B4B2A9" strokeWidth="1.2" strokeLinecap="round" fill="none" />
               </svg>
             )}
+            {quest.status === QUEST_STATUS.EXPIRED && (
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <circle cx="6" cy="6" r="5.5" stroke="#E24B4A" fill="#FDE4E4" />
+                <path d="M6 3.2V6.4" stroke="#E24B4A" strokeWidth="1.5" strokeLinecap="round" />
+                <circle cx="6" cy="8.6" r="0.8" fill="#E24B4A" />
+              </svg>
+            )}
           </div>
         </div>
 
@@ -85,6 +98,20 @@ function QuestNode({ id, data, selected }) {
           <span className="inline-block text-xs px-1.5 py-0.5 rounded mb-1.5"
             style={{ fontSize: 9, background: badge.bg, color: badge.color, fontWeight: 500 }}>
             {badge.label}
+          </span>
+        )}
+
+        {quest.status === QUEST_STATUS.EXPIRED && (
+          <span className="inline-block text-xs px-1.5 py-0.5 rounded mb-1.5"
+            style={{ fontSize: 9, background: '#FAD5D5', color: '#8E2222', fontWeight: 600 }}>
+            Deadline depassee
+          </span>
+        )}
+
+        {isNearDeadline && (
+          <span className="inline-block text-xs px-1.5 py-0.5 rounded mb-1.5"
+            style={{ fontSize: 9, background: '#FAEEDA', color: '#8A4F00', fontWeight: 600 }}>
+            Fermeture imminente
           </span>
         )}
 
@@ -102,6 +129,20 @@ function QuestNode({ id, data, selected }) {
             </span>
           )}
         </div>
+
+        {hasDeadline && quest.status !== QUEST_STATUS.DONE && quest.status !== QUEST_STATUS.EXPIRED && (
+          <div className="mt-1.5">
+            <span style={{ fontSize: 9, color: st.text, opacity: 0.8 }}>
+              {minutesLeft >= 43200
+                ? `${Math.floor(minutesLeft / 43200)} mois restants`
+                : minutesLeft >= 1440
+                  ? `${Math.floor(minutesLeft / 1440)} j restants`
+                  : minutesLeft >= 60
+                    ? `${Math.floor(minutesLeft / 60)} h restantes`
+                    : `${Math.max(0, minutesLeft)} min restantes`}
+            </span>
+          </div>
+        )}
       </div>
 
       <Handle type="source" position={Position.Right}

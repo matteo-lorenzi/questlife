@@ -45,6 +45,30 @@ function emitToast(msg, type = "success") {
   );
 }
 
+function emitSystemNotification(title, body) {
+  globalThis.dispatchEvent(
+    new CustomEvent("questlife:system-notify", { detail: { title, body } }),
+  );
+}
+
+function normalizeReminderOffsetsMs(offsets) {
+  if (!Array.isArray(offsets)) return [];
+  const clean = offsets
+    .map((v) => Number.parseInt(v, 10))
+    .filter((v) => Number.isFinite(v) && v > 0)
+    .map((v) => Math.max(60000, v));
+  return [...new Set(clean)].sort((a, b) => b - a).slice(0, 8);
+}
+
+function formatReminderLeadTime(offsetMs) {
+  const minutes = Math.round(offsetMs / 60000);
+  if (minutes >= 43200) return `${Math.round(minutes / 43200)} mois`;
+  if (minutes >= 10080) return `${Math.round(minutes / 10080)} sem`;
+  if (minutes >= 1440) return `${Math.round(minutes / 1440)} j`;
+  if (minutes >= 60) return `${Math.round(minutes / 60)} h`;
+  return `${minutes} min`;
+}
+
 function getInitialTheme() {
   const savedTheme = localStorage.getItem("questlife_theme");
   if (savedTheme === "light" || savedTheme === "dark") return savedTheme;
@@ -227,6 +251,13 @@ export const useStore = create((set, get) => ({
   quests: (initial.quests || []).map((q) => ({
     ...q,
     attachments: q.attachments || [],
+    deadlineAt: Number.isFinite(q.deadlineAt) ? q.deadlineAt : null,
+    deadlineMode: q.deadlineMode || "none",
+    durationMs: Number.isFinite(q.durationMs) ? q.durationMs : null,
+    reminderOffsetsMs: normalizeReminderOffsetsMs(q.reminderOffsetsMs),
+    sentReminderOffsetsMs: normalizeReminderOffsetsMs(q.sentReminderOffsetsMs),
+    expiredAt: Number.isFinite(q.expiredAt) ? q.expiredAt : null,
+    disabledReason: q.disabledReason || null,
   })),
   profile: initialProfile,
   canvasViewports: initial.canvasViewports || {},
@@ -367,6 +398,13 @@ export const useStore = create((set, get) => ({
       dependencies: [],
       position,
       attachments: [],
+      deadlineAt: null,
+      deadlineMode: "none",
+      durationMs: null,
+      reminderOffsetsMs: [],
+      sentReminderOffsetsMs: [],
+      expiredAt: null,
+      disabledReason: null,
       completedAt: null,
     };
     set((s) => ({ quests: [...s.quests, quest] }));
@@ -378,7 +416,28 @@ export const useStore = create((set, get) => ({
 
   updateQuest(id, data) {
     set((s) => {
-      let quests = s.quests.map((q) => (q.id === id ? { ...q, ...data } : q));
+      let quests = s.quests.map((q) => {
+        if (q.id !== id) return q;
+        const next = { ...q, ...data };
+        if (
+          q.status === QUEST_STATUS.EXPIRED &&
+          Object.hasOwn(data, "status") &&
+          data.status !== QUEST_STATUS.EXPIRED
+        ) {
+          next.status = QUEST_STATUS.EXPIRED;
+        }
+        if (Object.hasOwn(data, "reminderOffsetsMs")) {
+          next.reminderOffsetsMs = normalizeReminderOffsetsMs(
+            data.reminderOffsetsMs,
+          );
+        }
+        if (Object.hasOwn(data, "sentReminderOffsetsMs")) {
+          next.sentReminderOffsetsMs = normalizeReminderOffsetsMs(
+            data.sentReminderOffsetsMs,
+          );
+        }
+        return next;
+      });
       // If status changed or deps changed, recompute chapter
       const quest = quests.find((q) => q.id === id);
       if (quest) {
@@ -393,9 +452,200 @@ export const useStore = create((set, get) => ({
     get()._persist();
   },
 
+  setQuestDeadline(id, payload = {}) {
+    const quest = get().quests.find((q) => q.id === id);
+    if (!quest) return false;
+    if (quest.status === QUEST_STATUS.EXPIRED) {
+      emitToast(
+        "Cette quete est expiree. Utilisez la reactivation avec une nouvelle deadline.",
+        "error",
+      );
+      return false;
+    }
+
+    const deadlineAt = Number.parseInt(payload.deadlineAt, 10);
+    if (!Number.isFinite(deadlineAt) || deadlineAt <= Date.now() + 30000) {
+      emitToast("Deadline invalide: choisissez une date future.", "error");
+      return false;
+    }
+
+    const reminderOffsetsMs = normalizeReminderOffsetsMs(
+      payload.reminderOffsetsMs,
+    );
+
+    get().updateQuest(id, {
+      deadlineAt,
+      deadlineMode: payload.deadlineMode || "absolute",
+      durationMs: Number.isFinite(payload.durationMs)
+        ? payload.durationMs
+        : null,
+      reminderOffsetsMs,
+      sentReminderOffsetsMs: [],
+      expiredAt: null,
+      disabledReason: null,
+    });
+    emitToast("Deadline enregistree", "success");
+    return true;
+  },
+
+  clearQuestDeadline(id) {
+    const quest = get().quests.find((q) => q.id === id);
+    if (!quest) return false;
+    if (quest.status === QUEST_STATUS.EXPIRED) {
+      emitToast(
+        "Reactivation necessaire: une quete expiree doit recevoir une nouvelle deadline.",
+        "error",
+      );
+      return false;
+    }
+
+    get().updateQuest(id, {
+      deadlineAt: null,
+      deadlineMode: "none",
+      durationMs: null,
+      reminderOffsetsMs: [],
+      sentReminderOffsetsMs: [],
+      expiredAt: null,
+      disabledReason: null,
+    });
+    emitToast("Deadline supprimee", "success");
+    return true;
+  },
+
+  reactivateExpiredQuestWithNewDeadline(id, payload = {}) {
+    const quest = get().quests.find((q) => q.id === id);
+    if (!quest) return false;
+
+    const deadlineAt = Number.parseInt(payload.deadlineAt, 10);
+    if (!Number.isFinite(deadlineAt) || deadlineAt <= Date.now() + 30000) {
+      emitToast("Nouvelle deadline invalide.", "error");
+      return false;
+    }
+
+    const reminderOffsetsMs = normalizeReminderOffsetsMs(
+      payload.reminderOffsetsMs,
+    );
+
+    set((s) => {
+      let quests = s.quests.map((q) =>
+        q.id === id
+          ? {
+              ...q,
+              deadlineAt,
+              deadlineMode: payload.deadlineMode || "absolute",
+              durationMs: Number.isFinite(payload.durationMs)
+                ? payload.durationMs
+                : null,
+              reminderOffsetsMs,
+              sentReminderOffsetsMs: [],
+              expiredAt: null,
+              disabledReason: null,
+              status:
+                q.status === QUEST_STATUS.EXPIRED
+                  ? QUEST_STATUS.LOCKED
+                  : q.status,
+            }
+          : q,
+      );
+
+      const updatedQuest = quests.find((q) => q.id === id);
+      if (updatedQuest) {
+        const chapterQuests = quests.filter(
+          (q) => q.chapterId === updatedQuest.chapterId,
+        );
+        const recomputed = recomputeStatuses(chapterQuests);
+        quests = quests.map((q) => recomputed.find((u) => u.id === q.id) || q);
+      }
+
+      return { quests };
+    });
+
+    get()._persist();
+    emitToast("Quete reactivee avec une nouvelle deadline", "success");
+    return true;
+  },
+
+  checkDeadlinesAndEmitAlerts(now = Date.now()) {
+    const timestamp = Number.parseInt(now, 10);
+    const nowTs = Number.isFinite(timestamp) ? timestamp : Date.now();
+    const remindersToEmit = [];
+    const expirationsToEmit = [];
+    let hasChanges = false;
+
+    set((s) => {
+      const quests = s.quests.map((q) => {
+        if (!q.deadlineAt || q.status === QUEST_STATUS.DONE) return q;
+
+        if (q.status !== QUEST_STATUS.EXPIRED && q.deadlineAt <= nowTs) {
+          hasChanges = true;
+          expirationsToEmit.push(q);
+          return {
+            ...q,
+            status: QUEST_STATUS.EXPIRED,
+            expiredAt: nowTs,
+            disabledReason: "deadline_missed",
+          };
+        }
+
+        if (q.status === QUEST_STATUS.EXPIRED) return q;
+
+        const offsets = normalizeReminderOffsetsMs(q.reminderOffsetsMs);
+        if (offsets.length === 0) return q;
+
+        const sent = new Set(
+          normalizeReminderOffsetsMs(q.sentReminderOffsetsMs),
+        );
+        let questChanged = false;
+
+        for (const offset of offsets) {
+          if (sent.has(offset)) continue;
+          if (nowTs >= q.deadlineAt - offset && nowTs < q.deadlineAt) {
+            sent.add(offset);
+            questChanged = true;
+            remindersToEmit.push({ quest: q, offsetMs: offset });
+          }
+        }
+
+        if (!questChanged) return q;
+        hasChanges = true;
+        return {
+          ...q,
+          sentReminderOffsetsMs: [...sent].sort((a, b) => b - a),
+        };
+      });
+
+      return hasChanges ? { quests } : {};
+    });
+
+    if (!hasChanges) return;
+
+    for (const item of remindersToEmit) {
+      const { quest, offsetMs } = item;
+      const label = formatReminderLeadTime(offsetMs);
+      const msg = `Alarme: "${quest.title || "Quete sans titre"}" se ferme dans ${label}.`;
+      emitToast(msg, "error");
+      emitSystemNotification("QuestLife - alarme deadline", msg);
+    }
+
+    for (const quest of expirationsToEmit) {
+      const msg = `"${quest.title || "Quete sans titre"}" a ete desactivee pour retard.`;
+      emitToast(msg, "error");
+      emitSystemNotification("QuestLife - quete desactivee", msg);
+    }
+
+    get()._persist();
+  },
+
   completeQuest(id) {
     const quest = get().quests.find((q) => q.id === id);
     if (!quest || quest.status === QUEST_STATUS.DONE) return;
+    if (quest.status === QUEST_STATUS.EXPIRED) {
+      emitToast(
+        "Quete desactivee: reprogrammez une deadline pour la reactiver.",
+        "error",
+      );
+      return;
+    }
 
     set((s) => {
       let quests = s.quests.map((q) =>

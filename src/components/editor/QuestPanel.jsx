@@ -7,6 +7,40 @@ import { getDependents, wouldCreateCycle } from '../../utils/graph'
 import toast from 'react-hot-toast'
 
 const MAX_ATTACHMENT_BYTES = 900 * 1024
+const DEADLINE_UNITS = {
+  minutes: 60 * 1000,
+  hours: 60 * 60 * 1000,
+  days: 24 * 60 * 60 * 1000,
+  weeks: 7 * 24 * 60 * 60 * 1000,
+  months: 30 * 24 * 60 * 60 * 1000,
+}
+
+function toDatetimeLocalValue(ts) {
+  if (!ts) return ''
+  const d = new Date(ts)
+  const pad = (v) => String(v).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function formatOffset(ms) {
+  const minutes = Math.round(ms / 60000)
+  if (minutes >= 43200) return `${Math.round(minutes / 43200)} mois`
+  if (minutes >= 10080) return `${Math.round(minutes / 10080)} sem`
+  if (minutes >= 1440) return `${Math.round(minutes / 1440)} j`
+  if (minutes >= 60) return `${Math.round(minutes / 60)} h`
+  return `${minutes} min`
+}
+
+function formatDeadlinePreview(ts) {
+  if (!ts || !Number.isFinite(ts)) return 'Date invalide'
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(ts))
+}
 
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
@@ -23,6 +57,7 @@ export default function QuestPanel() {
     updateQuest, completeQuest, uncompleteQuest, deleteQuest, redirectAndDeleteQuest,
     addDependency, removeDependency,
     addQuestAttachments, removeQuestAttachment,
+    setQuestDeadline, clearQuestDeadline, reactivateExpiredQuestWithNewDeadline,
   } = useStore()
 
   const quest = quests.find(q => q.id === selectedQuestId)
@@ -33,11 +68,108 @@ export default function QuestPanel() {
   const [showDelModal, setShowDelModal] = useState(false)
   const [showRedirect, setShowRedirect] = useState(false)
   const [redirectTarget, setRedirectTarget] = useState('')
+  const [deadlineMode, setDeadlineMode] = useState('none')
+  const [absoluteDeadline, setAbsoluteDeadline] = useState('')
+  const [relativeAmount, setRelativeAmount] = useState('30')
+  const [relativeUnit, setRelativeUnit] = useState('minutes')
+  const [reminderAmount, setReminderAmount] = useState('15')
+  const [reminderUnit, setReminderUnit] = useState('minutes')
+  const [reminders, setReminders] = useState([])
 
   // Sync fields when quest changes
   useEffect(() => {
-    if (quest) { setTitle(quest.title); setDesc(quest.description || ''); setXp(quest.xp) }
+    if (!quest) return
+    setTitle(quest.title)
+    setDesc(quest.description || '')
+    setXp(quest.xp)
+    setDeadlineMode(quest.deadlineMode || (quest.deadlineAt ? 'absolute' : 'none'))
+    setAbsoluteDeadline(toDatetimeLocalValue(quest.deadlineAt))
+    if (quest.durationMs) {
+      const minutes = Math.max(1, Math.round(quest.durationMs / DEADLINE_UNITS.minutes))
+      setRelativeAmount(String(minutes))
+      setRelativeUnit('minutes')
+    } else {
+      setRelativeAmount('30')
+      setRelativeUnit('minutes')
+    }
+    setReminders(Array.isArray(quest.reminderOffsetsMs) ? quest.reminderOffsetsMs : [])
   }, [quest?.id])
+
+  function getReminderOffsetMs(amount, unit) {
+    const n = Number.parseInt(amount, 10)
+    if (!Number.isFinite(n) || n <= 0) return null
+    const ratio = DEADLINE_UNITS[unit]
+    if (!ratio) return null
+    return n * ratio
+  }
+
+  function resolveDeadlinePayload(modeOverride = deadlineMode) {
+    if (modeOverride === 'none') {
+      return { deadlineAt: null, deadlineMode: 'none', durationMs: null, reminderOffsetsMs: [] }
+    }
+
+    if (modeOverride === 'absolute') {
+      const ts = Date.parse(absoluteDeadline)
+      if (!Number.isFinite(ts)) return null
+      return {
+        deadlineAt: ts,
+        deadlineMode: 'absolute',
+        durationMs: null,
+        reminderOffsetsMs: reminders,
+      }
+    }
+
+    if (modeOverride === 'relative') {
+      const durationMs = getReminderOffsetMs(relativeAmount, relativeUnit)
+      if (!durationMs) return null
+      return {
+        deadlineAt: Date.now() + durationMs,
+        deadlineMode: 'relative',
+        durationMs,
+        reminderOffsetsMs: reminders,
+      }
+    }
+
+    return null
+  }
+
+  function handleSaveDeadline() {
+    if (!quest) return
+    if (deadlineMode === 'none') {
+      clearQuestDeadline(quest.id)
+      return
+    }
+    const payload = resolveDeadlinePayload()
+    if (!payload) {
+      toast.error('Configuration de deadline invalide')
+      return
+    }
+    const ok = setQuestDeadline(quest.id, payload)
+    if (ok && payload.deadlineMode === 'absolute') {
+      setAbsoluteDeadline(toDatetimeLocalValue(payload.deadlineAt))
+    }
+  }
+
+  function handleReactivate() {
+    if (!quest) return
+    const payload = resolveDeadlinePayload(deadlineMode === 'none' ? 'absolute' : deadlineMode)
+    if (!payload || !payload.deadlineAt) {
+      toast.error('Definissez une nouvelle deadline pour reactiver la quete')
+      return
+    }
+    const ok = reactivateExpiredQuestWithNewDeadline(quest.id, payload)
+    if (!ok) return
+    setAbsoluteDeadline(toDatetimeLocalValue(payload.deadlineAt))
+  }
+
+  function addReminderOffset() {
+    const offsetMs = getReminderOffsetMs(reminderAmount, reminderUnit)
+    if (!offsetMs) {
+      toast.error('Rappel invalide')
+      return
+    }
+    setReminders((prev) => [...new Set([...prev, offsetMs])].sort((a, b) => b - a))
+  }
 
   // Save on blur
   function saveField() {
@@ -117,14 +249,21 @@ export default function QuestPanel() {
   const dependents = getDependents(quests, quest.id)
 
   const statusBtns = [
-    { val: QUEST_STATUS.LOCKED, label: 'Verrouillée', disabled: quest.dependencies.length === 0 },
-    { val: QUEST_STATUS.ACTIVE, label: 'En cours', disabled: false },
-    { val: QUEST_STATUS.DONE, label: 'Complétée', disabled: false },
+    { val: QUEST_STATUS.LOCKED, label: 'Verrouillée', disabled: quest.dependencies.length === 0 || quest.status === QUEST_STATUS.EXPIRED },
+    { val: QUEST_STATUS.ACTIVE, label: 'En cours', disabled: quest.status === QUEST_STATUS.EXPIRED },
+    { val: QUEST_STATUS.DONE, label: 'Complétée', disabled: quest.status === QUEST_STATUS.EXPIRED },
   ]
+
+  const relativeDurationMs = getReminderOffsetMs(relativeAmount, relativeUnit)
+  const previewDeadlineAt = deadlineMode === 'absolute'
+    ? Date.parse(absoluteDeadline)
+    : deadlineMode === 'relative' && relativeDurationMs
+      ? Date.now() + relativeDurationMs
+      : null
 
   return (
     <>
-      <div className="w-64 flex-shrink-0 bg-white border-l border-gray-100 flex flex-col animate-slideInRight h-full">
+      <div className="w-72 flex-shrink-0 bg-white border-l border-gray-100 flex flex-col animate-slideInRight h-full">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
           <span className="text-xs font-medium text-gray-500">Éditer la quête</span>
@@ -163,6 +302,13 @@ export default function QuestPanel() {
           ))}
         </div>
 
+        {quest.status === QUEST_STATUS.EXPIRED && (
+          <div className="mx-4 mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2">
+            <p className="text-xs font-medium text-red-700">Quete desactivee pour retard</p>
+            <p className="text-xs text-red-600 mt-0.5">Reprogrammez une deadline pour la reactiver.</p>
+          </div>
+        )}
+
         {/* Fields */}
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
           <Input label="Titre" value={title}
@@ -190,6 +336,134 @@ export default function QuestPanel() {
               />
               <span className="text-xs text-gray-400">XP à la complétion</span>
               <span className="text-xs text-teal-700">= {(Number.parseInt(xp, 10) || 0).toLocaleString()} EUR</span>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-gray-200 bg-gray-50/70 p-3 space-y-2.5">
+            <p className="text-xs text-gray-500 font-medium">Deadline & alarmes</p>
+            <div className="grid grid-cols-3 gap-1.5">
+              {['none', 'absolute', 'relative'].map(mode => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setDeadlineMode(mode)}
+                  className="text-xs py-1.5 rounded-md border font-medium"
+                  style={deadlineMode === mode
+                    ? { borderColor: '#7F77DD', background: '#EEEDFE', color: '#4C478F' }
+                    : { borderColor: '#E5E5E0', background: 'white', color: '#666' }}
+                >
+                  {mode === 'none' ? 'Aucune' : mode === 'absolute' ? 'Date fixe' : 'Duree'}
+                </button>
+              ))}
+            </div>
+
+            {deadlineMode !== 'none' && (
+              <div className="rounded-lg border border-gray-200 bg-white px-2.5 py-2">
+                <p className="text-[11px] text-gray-500">Fermeture prevue</p>
+                <p className="text-xs text-gray-700 font-medium mt-0.5">
+                  {previewDeadlineAt && Number.isFinite(previewDeadlineAt)
+                    ? formatDeadlinePreview(previewDeadlineAt)
+                    : 'Definissez une date valide'}
+                </p>
+                <p className="text-[11px] text-gray-500 mt-1">
+                  {reminders.length} alarme{reminders.length > 1 ? 's' : ''} configuree{reminders.length > 1 ? 's' : ''}
+                </p>
+              </div>
+            )}
+
+            {deadlineMode === 'absolute' && (
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Date limite</label>
+                <input
+                  type="datetime-local"
+                  value={absoluteDeadline}
+                  onChange={e => setAbsoluteDeadline(e.target.value)}
+                  className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 bg-white outline-none"
+                />
+              </div>
+            )}
+
+            {deadlineMode === 'relative' && (
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Duree (minutes a mois)</label>
+                <div className="grid grid-cols-[96px_1fr] gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    value={relativeAmount}
+                    onChange={e => setRelativeAmount(e.target.value)}
+                    className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 bg-white outline-none"
+                  />
+                  <select
+                    value={relativeUnit}
+                    onChange={e => setRelativeUnit(e.target.value)}
+                    className="flex-1 text-sm px-3 py-2 rounded-lg border border-gray-200 bg-white outline-none"
+                  >
+                    <option value="minutes">Minutes</option>
+                    <option value="hours">Heures</option>
+                    <option value="days">Jours</option>
+                    <option value="weeks">Semaines</option>
+                    <option value="months">Mois</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {deadlineMode !== 'none' && (
+              <div className="space-y-1.5">
+                <label className="block text-xs text-gray-400">Alarmes avant fermeture</label>
+                <div className="grid grid-cols-[96px_1fr] gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    value={reminderAmount}
+                    onChange={e => setReminderAmount(e.target.value)}
+                    className="w-full text-xs px-2 py-1.5 rounded-lg border border-gray-200 bg-white outline-none"
+                  />
+                  <select
+                    value={reminderUnit}
+                    onChange={e => setReminderUnit(e.target.value)}
+                    className="w-full text-xs px-2 py-1.5 rounded-lg border border-gray-200 bg-white outline-none"
+                  >
+                    <option value="minutes">Minutes</option>
+                    <option value="hours">Heures</option>
+                    <option value="days">Jours</option>
+                    <option value="weeks">Semaines</option>
+                    <option value="months">Mois</option>
+                  </select>
+                </div>
+                <Btn type="button" size="sm" variant="default" onClick={addReminderOffset} className="w-full justify-center">Ajouter cette alarme</Btn>
+
+                <div className="flex flex-wrap gap-1.5">
+                  {reminders.length === 0 && (
+                    <span className="text-xs text-gray-400 italic">Aucune alarme</span>
+                  )}
+                  {reminders.map((ms) => (
+                    <span key={ms} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border border-amber-200 bg-amber-50 text-amber-700">
+                      {formatOffset(ms)}
+                      <button
+                        type="button"
+                        onClick={() => setReminders((prev) => prev.filter((v) => v !== ms))}
+                        className="text-amber-700 hover:text-amber-900"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              {quest.status !== QUEST_STATUS.EXPIRED ? (
+                <Btn type="button" size="sm" variant="default" onClick={handleSaveDeadline} className="w-full justify-center">
+                  Enregistrer la deadline
+                </Btn>
+              ) : (
+                <Btn type="button" size="sm" variant="danger" onClick={handleReactivate} className="w-full justify-center">
+                  Reactiver avec cette deadline
+                </Btn>
+              )}
             </div>
           </div>
 
@@ -269,11 +543,11 @@ export default function QuestPanel() {
         {/* Footer actions */}
         <div className="px-4 py-3 border-t border-gray-100 space-y-2">
           {quest.status !== QUEST_STATUS.DONE && (
-            <Btn onClick={() => completeQuest(quest.id)} variant="success" className="w-full justify-center">
+            <Btn onClick={() => completeQuest(quest.id)} variant="success" className="w-full justify-center" disabled={quest.status === QUEST_STATUS.EXPIRED}>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                 <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              Marquer comme faite
+              {quest.status === QUEST_STATUS.EXPIRED ? 'Deadline depassee' : 'Marquer comme faite'}
             </Btn>
           )}
           {quest.status === QUEST_STATUS.DONE && (

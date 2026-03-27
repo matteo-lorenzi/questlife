@@ -42,11 +42,30 @@ export default function App() {
         </div>
       ), { duration: 4000 })
     }
+
+    function onSystemNotify(e) {
+      const title = e?.detail?.title || 'QuestLife'
+      const body = e?.detail?.body || ''
+      if (!body) return
+      if (typeof globalThis.questlifeNotify === 'function') {
+        globalThis.questlifeNotify({ title, body })
+      }
+    }
+
+    function runDeadlineChecks() {
+      useStore.getState().checkDeadlinesAndEmitAlerts(Date.now())
+    }
+
     globalThis.addEventListener('questlife:toast', onToast)
     globalThis.addEventListener('questlife:badge', onBadge)
+    globalThis.addEventListener('questlife:system-notify', onSystemNotify)
+    runDeadlineChecks()
+    const deadlineInterval = globalThis.setInterval(runDeadlineChecks, 30000)
     return () => {
       globalThis.removeEventListener('questlife:toast', onToast)
       globalThis.removeEventListener('questlife:badge', onBadge)
+      globalThis.removeEventListener('questlife:system-notify', onSystemNotify)
+      globalThis.clearInterval(deadlineInterval)
     }
   }, [])
 

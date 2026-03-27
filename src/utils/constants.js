@@ -183,6 +183,7 @@ export const QUEST_STATUS = {
   DRAFT: "draft",
   LOCKED: "locked",
   ACTIVE: "active",
+  EXPIRED: "expired",
   DONE: "done",
 };
 export const QUEST_TYPE = {

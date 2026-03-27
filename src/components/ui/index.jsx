@@ -7,8 +7,8 @@ export function Btn({ children, onClick, variant = 'default', size = 'md', disab
   const variants = {
     default: 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300',
     primary: 'bg-purple-600 text-white hover:bg-purple-800 border border-transparent',
-    danger:  'border border-red-200 text-red-600 hover:bg-red-50',
-    ghost:   'text-gray-400 hover:text-gray-600 hover:bg-gray-50 border border-transparent',
+    danger: 'border border-red-200 text-red-600 hover:bg-red-50',
+    ghost: 'text-gray-400 hover:text-gray-600 hover:bg-gray-50 border border-transparent',
     success: 'bg-teal-50 text-teal-600 border border-teal-200 hover:bg-teal-100',
   }
   return (
@@ -39,14 +39,14 @@ export function Modal({ open, onClose, children, title, width = 'max-w-lg' }) {
       onClick={(e) => { if (e.target === overlayRef.current) onClose() }}
     >
       <div className={`bg-white rounded-xl border border-gray-100 w-full ${width} animate-scaleIn`}
-           style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
+        style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
         {title && (
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <span className="text-sm font-medium text-gray-900">{title}</span>
             <button onClick={onClose}
               className="w-7 h-7 flex items-center justify-center rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M2 2L12 12M12 2L2 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <path d="M2 2L12 12M12 2L2 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </button>
           </div>
@@ -77,24 +77,25 @@ export function ProgressBar({ pct, accent = '#1D9E75', height = 4, className = '
   return (
     <div className={`rounded-full overflow-hidden bg-gray-100 ${className}`} style={{ height }}>
       <div className="h-full rounded-full transition-all duration-500"
-           style={{ width: `${Math.min(100, pct)}%`, background: accent }} />
+        style={{ width: `${Math.min(100, pct)}%`, background: accent }} />
     </div>
   )
 }
 
 // ── StatusPill ────────────────────────────────────────────────────────────────
 const STATUS_STYLES = {
-  draft:  { bg: '#F1EFE8', text: '#5F5E5A', label: 'Brouillon' },
+  draft: { bg: '#F1EFE8', text: '#5F5E5A', label: 'Brouillon' },
   locked: { bg: '#F1EFE8', text: '#888780', label: 'Verrouillée' },
   active: { bg: '#FAEEDA', text: '#633806', label: 'En cours' },
-  done:   { bg: '#E1F5EE', text: '#085041', label: 'Complétée' },
+  expired: { bg: '#FCEBEB', text: '#8E2222', label: 'Expirée' },
+  done: { bg: '#E1F5EE', text: '#085041', label: 'Complétée' },
 }
 
 export function StatusPill({ status }) {
   const s = STATUS_STYLES[status] || STATUS_STYLES.locked
   return (
     <span className="text-xs font-medium px-2 py-0.5 rounded-full"
-          style={{ background: s.bg, color: s.text }}>
+      style={{ background: s.bg, color: s.text }}>
       {s.label}
     </span>
   )

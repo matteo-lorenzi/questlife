@@ -1,4 +1,10 @@
-const { app, BrowserWindow, dialog } = require("electron");
+const {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  Notification,
+} = require("electron");
 const { autoUpdater } = require("electron-updater");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -76,6 +82,7 @@ function createMainWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      preload: path.join(__dirname, "preload.cjs"),
     },
   });
 
@@ -87,6 +94,25 @@ function createMainWindow() {
 
   return win;
 }
+
+ipcMain.handle("questlife:notify", async (_event, payload) => {
+  if (!Notification.isSupported()) return { ok: false, reason: "unsupported" };
+
+  const titleRaw =
+    typeof payload?.title === "string" ? payload.title : "QuestLife";
+  const bodyRaw = typeof payload?.body === "string" ? payload.body : "";
+  const title = titleRaw.trim().slice(0, 80) || "QuestLife";
+  const body = bodyRaw.trim().slice(0, 240);
+  if (!body) return { ok: false, reason: "empty" };
+
+  const notif = new Notification({
+    title,
+    body,
+    silent: false,
+  });
+  notif.show();
+  return { ok: true };
+});
 
 app.whenReady().then(() => {
   const win = createMainWindow();
