@@ -10,6 +10,7 @@
     "package.json"
   ],
   "win": {
+    "executableName": "QuestLife",
     "artifactName": "${productName} Setup ${version}.${ext}",
     "target": [
       {
