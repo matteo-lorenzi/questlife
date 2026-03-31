@@ -1,6 +1,0 @@
-moi je veux ne pas être obligée de glisser chaque élément sur le canvasi je clique ça doit appara^tre. je veux un petit bouton pour les valider et pas que j'ai à tout modifier 
-Je veux aussi un message de succès du type "bravo ma reine"
-chaque XP doit correspondre à un versement en euros sur mon compte en banque. sachant que 1 XP vaut 1 euro. tu m'auras pas avec des bêtises. 
-je veux pouvoir mettre des petites images et des docs dedans (j'abuse en plus j'écris tout papier)
-A la fin je veux un diplome et un combat épique pour chaque chapitre 
-au moins une petite animation que tu auras faite à la main stp 

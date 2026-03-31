@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { nanoid } from 'nanoid'
 import { useStore } from '../../store/useStore'
-import { Btn, Input, Textarea } from '../ui'
+import { Btn, Input } from '../ui'
 import { QUEST_STATUS } from '../../utils/constants'
 import { getDependents, wouldCreateCycle } from '../../utils/graph'
 import toast from 'react-hot-toast'
@@ -75,6 +75,8 @@ export default function QuestPanel() {
   const [reminderAmount, setReminderAmount] = useState('15')
   const [reminderUnit, setReminderUnit] = useState('minutes')
   const [reminders, setReminders] = useState([])
+  const [checklistDraft, setChecklistDraft] = useState('')
+  const [checklistItems, setChecklistItems] = useState([])
 
   // Sync fields when quest changes
   useEffect(() => {
@@ -82,6 +84,8 @@ export default function QuestPanel() {
     setTitle(quest.title)
     setDesc(quest.description || '')
     setXp(quest.xp)
+    setChecklistDraft('')
+    setChecklistItems(Array.isArray(quest.checklistItems) ? quest.checklistItems : [])
     setDeadlineMode(quest.deadlineMode || (quest.deadlineAt ? 'absolute' : 'none'))
     setAbsoluteDeadline(toDatetimeLocalValue(quest.deadlineAt))
     if (quest.durationMs) {
@@ -171,6 +175,34 @@ export default function QuestPanel() {
     setReminders((prev) => [...new Set([...prev, offsetMs])].sort((a, b) => b - a))
   }
 
+  function saveChecklist(nextItems) {
+    if (!quest) return
+    setChecklistItems(nextItems)
+    updateQuest(quest.id, { checklistItems: nextItems })
+  }
+
+  function addChecklistItem() {
+    const label = checklistDraft.trim()
+    if (!label || !quest || quest.status === QUEST_STATUS.DONE) return
+    const nextItems = [...checklistItems, { id: nanoid(), label, done: false }]
+    saveChecklist(nextItems)
+    setChecklistDraft('')
+  }
+
+  function toggleChecklistItem(itemId) {
+    if (!quest || quest.status === QUEST_STATUS.DONE) return
+    const nextItems = checklistItems.map((item) => (
+      item.id === itemId ? { ...item, done: !item.done } : item
+    ))
+    saveChecklist(nextItems)
+  }
+
+  function removeChecklistItem(itemId) {
+    if (!quest || quest.status === QUEST_STATUS.DONE) return
+    const nextItems = checklistItems.filter((item) => item.id !== itemId)
+    saveChecklist(nextItems)
+  }
+
   // Save on blur
   function saveField() {
     if (!quest) return
@@ -255,6 +287,10 @@ export default function QuestPanel() {
   ]
 
   const relativeDurationMs = getReminderOffsetMs(relativeAmount, relativeUnit)
+  const checklistDone = checklistItems.filter((item) => item.done).length
+  const checklistPct = checklistItems.length > 0
+    ? Math.round((checklistDone / checklistItems.length) * 100)
+    : 0
   const previewDeadlineAt = deadlineMode === 'absolute'
     ? Date.parse(absoluteDeadline)
     : deadlineMode === 'relative' && relativeDurationMs
@@ -318,12 +354,91 @@ export default function QuestPanel() {
             disabled={quest.status === QUEST_STATUS.DONE}
           />
 
-          <Textarea label="Description" value={desc}
-            onChange={e => setDesc(e.target.value)}
-            onBlur={saveField}
-            placeholder="Détails…"
-            rows={3}
-          />
+          <div>
+            <label htmlFor="quest-description" className="block text-xs text-gray-400 font-medium mb-1">Description</label>
+            <textarea
+              id="quest-description"
+              value={desc}
+              onChange={e => setDesc(e.target.value)}
+              onBlur={saveField}
+              placeholder="Details…"
+              rows={4}
+              disabled={quest.status === QUEST_STATUS.DONE}
+              className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 bg-white hover:border-gray-300
+              focus:border-purple-400 outline-none transition-colors resize-none text-gray-900 placeholder:text-gray-300"
+            />
+          </div>
+
+          <div className="rounded-xl border border-teal-200 bg-gradient-to-br from-teal-50 via-white to-teal-50/40 p-3 space-y-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold text-teal-800">Checklist d'avancement</p>
+              <span className="text-[10px] text-teal-700 font-semibold whitespace-nowrap">{checklistDone}/{checklistItems.length} • {checklistPct}%</span>
+            </div>
+
+            <div className="h-2 rounded-full bg-teal-100 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-teal-500 transition-all duration-300"
+                style={{ width: `${checklistPct}%` }}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <input
+                type="text"
+                value={checklistDraft}
+                onChange={(e) => setChecklistDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    addChecklistItem()
+                  }
+                }}
+                disabled={quest.status === QUEST_STATUS.DONE}
+                placeholder="Nouvelle etape..."
+                className="w-full text-xs px-2.5 py-2 rounded-lg border border-teal-200 bg-white text-gray-700 outline-none focus:border-teal-400"
+              />
+              <Btn
+                type="button"
+                size="sm"
+                variant="default"
+                onClick={addChecklistItem}
+                disabled={quest.status === QUEST_STATUS.DONE || !checklistDraft.trim()}
+                className="w-full justify-center border-teal-200 text-teal-700 hover:bg-teal-100"
+              >
+                Ajouter l'etape
+              </Btn>
+            </div>
+
+            <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+              {checklistItems.length === 0 && (
+                <p className="text-xs text-gray-500 italic leading-relaxed">Ajoutez des etapes pour suivre l'avancement puis cochez-les au fur et a mesure.</p>
+              )}
+
+              {checklistItems.map((item) => (
+                <div key={item.id} className="flex items-center gap-2 rounded-lg border border-teal-100 bg-white px-2 py-1.5">
+                  <input
+                    type="checkbox"
+                    checked={item.done}
+                    onChange={() => toggleChecklistItem(item.id)}
+                    disabled={quest.status === QUEST_STATUS.DONE}
+                    className="accent-teal-600"
+                  />
+                  <span className={`flex-1 text-xs ${item.done ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
+                    {item.label}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeChecklistItem(item.id)}
+                    disabled={quest.status === QUEST_STATUS.DONE}
+                    className="text-xs text-gray-400 hover:text-red-500 disabled:opacity-40"
+                    title="Supprimer"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
 
           <div>
             <label htmlFor="quest-xp" className="block text-xs text-gray-400 mb-1 font-medium">Points XP</label>

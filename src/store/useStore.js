@@ -60,6 +60,18 @@ function normalizeReminderOffsetsMs(offsets) {
   return [...new Set(clean)].sort((a, b) => b - a).slice(0, 8);
 }
 
+function normalizeChecklistItems(items) {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item) => ({
+      id: item?.id || nanoid(),
+      label: typeof item?.label === "string" ? item.label.trim() : "",
+      done: Boolean(item?.done),
+    }))
+    .filter((item) => item.label.length > 0)
+    .slice(0, 30);
+}
+
 function formatReminderLeadTime(offsetMs) {
   const minutes = Math.round(offsetMs / 60000);
   if (minutes >= 43200) return `${Math.round(minutes / 43200)} mois`;
@@ -250,6 +262,7 @@ export const useStore = create((set, get) => ({
   }),
   quests: (initial.quests || []).map((q) => ({
     ...q,
+    checklistItems: normalizeChecklistItems(q.checklistItems),
     attachments: q.attachments || [],
     deadlineAt: Number.isFinite(q.deadlineAt) ? q.deadlineAt : null,
     deadlineMode: q.deadlineMode || "none",
@@ -397,6 +410,7 @@ export const useStore = create((set, get) => ({
       type,
       dependencies: [],
       position,
+      checklistItems: [],
       attachments: [],
       deadlineAt: null,
       deadlineMode: "none",
@@ -435,6 +449,9 @@ export const useStore = create((set, get) => ({
           next.sentReminderOffsetsMs = normalizeReminderOffsetsMs(
             data.sentReminderOffsetsMs,
           );
+        }
+        if (Object.hasOwn(data, "checklistItems")) {
+          next.checklistItems = normalizeChecklistItems(data.checklistItems);
         }
         return next;
       });
@@ -639,6 +656,17 @@ export const useStore = create((set, get) => ({
   completeQuest(id) {
     const quest = get().quests.find((q) => q.id === id);
     if (!quest || quest.status === QUEST_STATUS.DONE) return;
+    if (quest.status === QUEST_STATUS.DRAFT) {
+      emitToast("Ajoutez un titre avant de valider cette quete.", "error");
+      return;
+    }
+    if (quest.status === QUEST_STATUS.LOCKED) {
+      emitToast(
+        "Quete verrouillee: completez les prerequis avant la validation.",
+        "error",
+      );
+      return;
+    }
     if (quest.status === QUEST_STATUS.EXPIRED) {
       emitToast(
         "Quete desactivee: reprogrammez une deadline pour la reactiver.",
@@ -682,6 +710,27 @@ export const useStore = create((set, get) => ({
 
       return { quests, profile };
     });
+
+    const nextState = get();
+    const chapterQuests = nextState.quests.filter(
+      (q) => q.chapterId === quest.chapterId,
+    );
+    const chapterIsComplete =
+      chapterQuests.length > 0 &&
+      chapterQuests.every((q) => q.status === QUEST_STATUS.DONE);
+
+    if (chapterIsComplete) {
+      const chapter = nextState.chapters.find((c) => c.id === quest.chapterId);
+      globalThis.dispatchEvent(
+        new CustomEvent("questlife:chapter-complete", {
+          detail: {
+            chapterId: quest.chapterId,
+            chapterTitle: chapter?.title || "Chapitre",
+          },
+        }),
+      );
+    }
+
     get().updateStreak();
     get().checkWeeklyObjectives({ completedQuestId: id, earnedXP: quest.xp });
     get()._persist();

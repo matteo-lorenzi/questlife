@@ -173,6 +173,35 @@
   }
 }
 
+@keyframes ql-bravo-pulse {
+  0% {
+    transform: scale(0.92);
+    filter: saturate(0.9);
+  }
+  40% {
+    transform: scale(1.06);
+    filter: saturate(1.15);
+  }
+  100% {
+    transform: scale(1);
+    filter: saturate(1);
+  }
+}
+
+@keyframes ql-confetti-fall {
+  0% {
+    transform: translate3d(0, -18vh, 0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--drift, 0px), 110vh, 0) rotate(580deg);
+    opacity: 0;
+  }
+}
+
 .animate-fadeIn {
   animation: fadeIn 0.2s ease-out;
 }
@@ -196,6 +225,23 @@
 }
 .animate-diplomaReveal {
   animation: diploma-reveal 0.5s ease-out;
+}
+
+.animate-qlBravoPulse {
+  animation: ql-bravo-pulse 0.7s ease-out;
+}
+
+.ql-confetti {
+  position: absolute;
+  top: -10%;
+  width: 9px;
+  height: 14px;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
+  animation-name: ql-confetti-fall;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+  will-change: transform, opacity;
 }
 
 /* Node status styles */

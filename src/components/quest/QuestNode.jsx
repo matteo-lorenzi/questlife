@@ -17,6 +17,14 @@ const TYPE_BADGE = {
   boss: { label: 'Objectif final', color: '#BA7517', bg: '#FAEEDA' },
 }
 
+const STATUS_LABEL = {
+  draft: 'Brouillon',
+  locked: 'Verrouillee',
+  active: 'En cours',
+  expired: 'Expiree',
+  done: 'Completee',
+}
+
 function QuestNode({ id, data, selected }) {
   const { selectQuest, selectedQuestId, completeQuest } = useStore()
   const { quest } = data
@@ -29,10 +37,17 @@ function QuestNode({ id, data, selected }) {
   const hasDeadline = Number.isFinite(quest.deadlineAt)
   const minutesLeft = hasDeadline ? Math.max(0, Math.floor((quest.deadlineAt - now) / 60000)) : null
   const isNearDeadline = hasDeadline && quest.status !== QUEST_STATUS.DONE && quest.status !== QUEST_STATUS.EXPIRED && minutesLeft <= 60
+  const checklistItems = Array.isArray(quest.checklistItems) ? quest.checklistItems : []
+  const checklistDone = checklistItems.filter((item) => item.done).length
+  const checklistPct = checklistItems.length > 0 ? Math.round((checklistDone / checklistItems.length) * 100) : (quest.status === QUEST_STATUS.DONE ? 100 : 0)
+  const progressLabel = checklistItems.length > 0
+    ? `${checklistDone}/${checklistItems.length} etapes`
+    : STATUS_LABEL[quest.status] || 'En cours'
+  const hoverDesc = (quest.description || '').trim() || 'Aucune description'
 
   return (
     <div
-      className={`quest-node quest-node-${quest.status} relative`}
+      className={`quest-node quest-node-${quest.status} relative group`}
       onClick={() => selectQuest(id)}
     >
       <Handle type="target" position={Position.Left}
@@ -62,7 +77,6 @@ function QuestNode({ id, data, selected }) {
                   e.stopPropagation()
                   completeQuest(quest.id)
                 }}
-                disabled={quest.status === QUEST_STATUS.EXPIRED}
                 className="w-5 h-5 rounded-full border border-teal-300 bg-teal-50 text-teal-700 hover:bg-teal-100 transition-colors flex items-center justify-center"
                 title="Valider rapidement"
               >
@@ -147,6 +161,24 @@ function QuestNode({ id, data, selected }) {
 
       <Handle type="source" position={Position.Right}
         style={{ right: -5, top: '50%', transform: 'translateY(-50%)' }} />
+
+      <div className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 w-56 -translate-x-1/2 opacity-0 transition-all duration-150 group-hover:opacity-100 group-hover:translate-y-0 translate-y-1">
+        <div className="rounded-xl border border-gray-200 bg-white/95 backdrop-blur px-3 py-2 shadow-lg">
+          <p className="text-[11px] font-semibold text-gray-700 mb-1">Description</p>
+          <p className="text-[11px] text-gray-600 leading-relaxed line-clamp-3">{hoverDesc}</p>
+
+          <div className="mt-2 pt-2 border-t border-gray-100">
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <p className="text-[11px] font-semibold text-gray-700">Avancement</p>
+              <span className="text-[10px] text-teal-700 font-semibold whitespace-nowrap">{checklistPct}%</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-teal-100 overflow-hidden">
+              <div className="h-full rounded-full bg-teal-500 transition-all duration-300" style={{ width: `${checklistPct}%` }} />
+            </div>
+            <p className="text-[10px] text-gray-500 mt-1">{progressLabel}</p>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

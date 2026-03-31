@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import toast, { Toaster } from 'react-hot-toast'
 import { useStore } from './store/useStore'
 import HomePage from './components/layout/HomePage'
@@ -15,6 +15,7 @@ globalThis.document?.documentElement.classList.toggle('dark', initialTheme === '
 export default function App() {
   const { chapters, activeChapterId } = useStore()
   const activeChapter = chapters.find(c => c.id === activeChapterId)
+  const [chapterCelebration, setChapterCelebration] = useState(null)
 
   async function sendDesktopNotification(title, body) {
     if (!body) return false
@@ -46,6 +47,8 @@ export default function App() {
   }
 
   useEffect(() => {
+    let celebrationTimer = null
+
     function onToast(e) {
       const type = e?.detail?.type || 'success'
       const msg = e?.detail?.msg || ''
@@ -79,6 +82,16 @@ export default function App() {
       void sendDesktopNotification(title, body)
     }
 
+    function onChapterComplete(e) {
+      const chapterTitle = e?.detail?.chapterTitle || 'Chapitre'
+      const celebrationKey = Date.now()
+      setChapterCelebration({ chapterTitle, celebrationKey })
+      if (celebrationTimer) globalThis.clearTimeout(celebrationTimer)
+      celebrationTimer = globalThis.setTimeout(() => {
+        setChapterCelebration(null)
+      }, 3600)
+    }
+
     function runDeadlineChecks() {
       useStore.getState().checkDeadlinesAndEmitAlerts(Date.now())
     }
@@ -86,15 +99,20 @@ export default function App() {
     globalThis.addEventListener('questlife:toast', onToast)
     globalThis.addEventListener('questlife:badge', onBadge)
     globalThis.addEventListener('questlife:system-notify', onSystemNotify)
+    globalThis.addEventListener('questlife:chapter-complete', onChapterComplete)
     runDeadlineChecks()
     const deadlineInterval = globalThis.setInterval(runDeadlineChecks, 30000)
     return () => {
       globalThis.removeEventListener('questlife:toast', onToast)
       globalThis.removeEventListener('questlife:badge', onBadge)
       globalThis.removeEventListener('questlife:system-notify', onSystemNotify)
+      globalThis.removeEventListener('questlife:chapter-complete', onChapterComplete)
+      if (celebrationTimer) globalThis.clearTimeout(celebrationTimer)
       globalThis.clearInterval(deadlineInterval)
     }
   }, [])
+
+  const confettiColors = ['#1D9E75', '#EF9F27', '#7F77DD', '#378ADD', '#E24B4A', '#D4537E']
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-gray-50 dark:bg-zinc-950">
@@ -108,6 +126,39 @@ export default function App() {
       )}
       <ChapterModal />
       <ProfilePage />
+      {chapterCelebration && (
+        <div className="pointer-events-none fixed inset-0 z-[120] flex items-center justify-center">
+          <div className="absolute inset-0 bg-gradient-to-b from-white/80 via-amber-50/55 to-transparent dark:from-zinc-950/75 dark:via-zinc-900/55" />
+          <div className="relative text-center animate-scaleIn">
+            <p className="text-6xl sm:text-7xl font-black tracking-[0.08em] text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-teal-500 to-blue-500 animate-qlBravoPulse drop-shadow-[0_6px_18px_rgba(0,0,0,0.18)]">
+              BRAVO
+            </p>
+            <p className="mt-3 text-xl font-bold text-gray-700 dark:text-gray-100">
+              Chapitre termine: {chapterCelebration.chapterTitle}
+            </p>
+          </div>
+
+          {Array.from({ length: 48 }).map((_, i) => {
+            const left = (i * 19 + chapterCelebration.celebrationKey) % 100
+            const drift = ((i * 17) % 70) - 35
+            const delay = (i % 10) * 0.06
+            const duration = 2.2 + ((i * 23) % 100) / 90
+            return (
+              <span
+                key={`${chapterCelebration.celebrationKey}-${i}`}
+                className="ql-confetti"
+                style={{
+                  left: `${left}%`,
+                  background: confettiColors[i % confettiColors.length],
+                  animationDelay: `${delay}s`,
+                  animationDuration: `${duration}s`,
+                  '--drift': `${drift}px`,
+                }}
+              />
+            )
+          })}
+        </div>
+      )}
       <Toaster position="top-right"
         toastOptions={{
           style: { background: 'white', border: '1px solid #E5E5E0', borderRadius: 12, fontSize: 13 },
