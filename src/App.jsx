@@ -131,7 +131,7 @@ export default function App() {
           <div className="absolute inset-0 bg-gradient-to-b from-white/80 via-amber-50/55 to-transparent dark:from-zinc-950/75 dark:via-zinc-900/55" />
           <div className="relative text-center animate-scaleIn">
             <p className="text-6xl sm:text-7xl font-black tracking-[0.08em] text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-teal-500 to-blue-500 animate-qlBravoPulse drop-shadow-[0_6px_18px_rgba(0,0,0,0.18)]">
-              BRAVO
+              BRAVO MA REINE T'ES TROP FORTE
             </p>
             <p className="mt-3 text-xl font-bold text-gray-700 dark:text-gray-100">
               Chapitre termine: {chapterCelebration.chapterTitle}
