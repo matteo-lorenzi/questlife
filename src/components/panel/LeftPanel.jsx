@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { loadPanelPrefs, savePanelPrefs } from '../../utils/panelPrefs'
+import React, { useEffect, useState } from 'react'
+import { loadPanelPrefs, savePanelPrefs, OPEN_PANEL_TAB_EVENT } from '../../utils/panelPrefs'
 
 // Panneau gauche à onglets. `tabs` est un registre [{ id, label, component }].
 // Les composants d'onglet reçoivent `tabProps`.
@@ -13,11 +13,23 @@ export default function LeftPanel({ tabs, tabProps = {}, defaultTab }) {
     ?? tabs[0]
   const ActiveComponent = activeTab?.component
 
+  // Forme fonctionnelle : l'écouteur d'événement ne doit pas lire un `prefs` périmé.
   function update(patch) {
-    const next = { ...prefs, ...patch }
-    setPrefs(next)
-    savePanelPrefs(next)
+    setPrefs(prev => {
+      const next = { ...prev, ...patch }
+      savePanelPrefs(next)
+      return next
+    })
   }
+
+  useEffect(() => {
+    function onOpenTab(e) {
+      const tabId = e?.detail?.tabId
+      if (tabs.some(t => t.id === tabId)) update({ activeTab: tabId, collapsed: false })
+    }
+    globalThis.addEventListener(OPEN_PANEL_TAB_EVENT, onOpenTab)
+    return () => globalThis.removeEventListener(OPEN_PANEL_TAB_EVENT, onOpenTab)
+  }, [tabs])
 
   if (prefs.collapsed) {
     return (

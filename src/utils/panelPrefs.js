@@ -2,7 +2,14 @@
 // Clé localStorage dédiée, volontairement hors de `questlife_data`.
 export const PANEL_PREFS_KEY = 'questlife_left_panel'
 
-const DEFAULTS = { collapsed: false, activeTab: null }
+// Événement demandant au panneau gauche d'afficher un onglet (et de se déployer).
+export const OPEN_PANEL_TAB_EVENT = 'questlife:open-panel-tab'
+
+export function requestOpenPanelTab(tabId) {
+  globalThis.dispatchEvent(new CustomEvent(OPEN_PANEL_TAB_EVENT, { detail: { tabId } }))
+}
+
+const DEFAULTS ={ collapsed: false, activeTab: null }
 
 export function loadPanelPrefs(storage = globalThis.localStorage) {
   try {
