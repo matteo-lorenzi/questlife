@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import AgendaSlotRow from './AgendaSlotRow'
 import { useStore } from '../../store/useStore'
-import { GRID_START_HOUR, GRID_END_HOUR, minutesSinceGridStart } from '../../utils/agenda'
+import { GRID_START_HOUR, GRID_END_HOUR, minutesSinceGridStart, slotTimesForGridClick } from '../../utils/agenda'
 
 const HOUR_PX = 48
 const MIN_BLOCK_PX = 20
@@ -12,7 +12,7 @@ const TOTAL_PX = (GRID_END_HOUR - GRID_START_HOUR) * HOUR_PX
 const pad = n => String(n).padStart(2, '0')
 
 // Grille horaire en lecture seule : un jour, axe 06:00-23:00, 48 px par heure.
-export default function AgendaGrid({ dayKey, todayKey, now }) {
+export default function AgendaGrid({ dayKey, todayKey, now, onCreateAt }) {
   const getAgendaGridForDay = useStore(s => s.getAgendaGridForDay)
   const slots = useStore(s => s.agenda.slots) // re-render quand les créneaux changent
   const chapters = useStore(s => s.chapters)
@@ -43,7 +43,13 @@ export default function AgendaGrid({ dayKey, todayKey, now }) {
   return (
     <div ref={scrollRef} data-testid="agenda-grid"
       className="relative overflow-y-auto h-72 rounded-lg border border-gray-100 dark:border-zinc-800">
-      <div className="relative" style={{ height: TOTAL_PX + 8 }}>
+      <div className="relative" style={{ height: TOTAL_PX + 8 }}
+        onClick={e => {
+          // Seule une zone vide déclenche la création (blocs et repères stoppent la propagation).
+          if (!onCreateAt || e.target.closest('[data-grid-item]')) return
+          const rect = e.currentTarget.getBoundingClientRect()
+          onCreateAt(slotTimesForGridClick((e.clientY - rect.top) / PX_PER_MIN))
+        }}>
         {HOURS.map((h, i) => (
           <React.Fragment key={h}>
             <div className="absolute left-0 right-0 border-t border-gray-200 dark:border-zinc-700" style={{ top: i * HOUR_PX }}>
@@ -61,7 +67,7 @@ export default function AgendaGrid({ dayKey, todayKey, now }) {
             const height = Math.max(MIN_BLOCK_PX, (item.endMin - item.startMin) * PX_PER_MIN)
             const accent = chapter?.color?.accent || '#a855f7'
             return (
-              <button key={item.id} type="button" title={item.title} data-slot-id={item.id}
+              <button key={item.id} type="button" title={item.title} data-slot-id={item.id} data-grid-item
                 onClick={e => setOpen({ id: item.id, rect: e.currentTarget.getBoundingClientRect() })}
                 className="absolute left-0 right-0 overflow-hidden rounded-md px-1.5 py-0.5 text-left text-[11px] leading-tight text-gray-800 dark:text-gray-100 bg-purple-100/80 dark:bg-zinc-800 cursor-pointer"
                 style={{ top: item.startMin * PX_PER_MIN, height, borderLeft: `3px solid ${accent}`, backgroundColor: `${accent}26` }}>
