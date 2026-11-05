@@ -23,7 +23,7 @@ Le calendrier intégré où l'utilisateur planifie son emploi du temps de révis
 _Avoid_: Planning, calendrier
 
 **Grille horaire**:
-La vue du jour sélectionné, sous le mini-calendrier : une seule colonne avec un axe des heures de 06:00 à 23:00, où les créneaux de révision occupent leur plage et les deadlines sont des repères à leur heure. Les éléments qui se chevauchent se placent côte à côte. Un créneau qui déborde de la plage est tronqué à sa limite et marqué ; un élément entièrement hors plage va dans une bande fixe « Avant 06:00 » ou « Après 23:00 », visible sans défiler. Un clic sur un créneau ouvre ses actions ; un clic sur une zone vide prépare un nouveau créneau à cette heure. Une ligne marque l'heure actuelle sur aujourd'hui.
+La vue du jour sélectionné, sous le mini-calendrier : une seule colonne avec un axe des heures de 06:00 à 23:00, où les créneaux de révision occupent leur plage et les deadlines sont des repères à leur heure. Les éléments qui se chevauchent se placent côte à côte. Un créneau qui déborde de la plage est tronqué à sa limite et marqué ; un élément entièrement hors plage (avant 06:00, ou à partir de 23:00 pile) va dans une bande fixe « Avant 06:00 » ou « Après 23:00 », visible sans défiler. Un clic sur un créneau ouvre ses actions dans une carte flottante (un clic dans le vide ferme cette carte, sans rien créer) ; un clic sur une zone vide prépare un créneau d'une heure à l'heure cliquée, arrondie à la demi-heure et plafonnée à 22:30 pour que le créneau reste visible dans la grille. Un jour sans élément affiche une invitation à cliquer sur la grille. Une ligne marque l'heure actuelle sur aujourd'hui.
 _Avoid_: Timeline, vue jour
 
 **Créneau de révision**:

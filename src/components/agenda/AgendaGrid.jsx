@@ -1,16 +1,15 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import AgendaSlotRow from './AgendaSlotRow'
 import { useStore } from '../../store/useStore'
-import { GRID_START_HOUR, GRID_END_HOUR, minutesSinceGridStart, slotTimesForGridClick } from '../../utils/agenda'
+import AgendaDeadlineButton from './AgendaDeadlineButton'
+import { GRID_START_HOUR, GRID_END_HOUR, minutesSinceGridStart, slotTimesForGridClick, minutesToHHMM, gridMinutesToHHMM } from '../../utils/agenda'
 
 const HOUR_PX = 48
-const MIN_BLOCK_PX = 20
 const DEADLINE_PX = 18
 const PX_PER_MIN = HOUR_PX / 60
 const HOURS = Array.from({ length: GRID_END_HOUR - GRID_START_HOUR + 1 }, (_, i) => GRID_START_HOUR + i)
 const TOTAL_PX = (GRID_END_HOUR - GRID_START_HOUR) * HOUR_PX
-const pad = n => String(n).padStart(2, '0')
 // Largeur et décalage horizontal d'un élément selon sa colonne de chevauchement.
 const colStyle = item => ({ left: `${(item.col / item.cols) * 100}%`, width: `${100 / item.cols}%` })
 
@@ -23,6 +22,8 @@ export default function AgendaGrid({ dayKey, todayKey, now, onCreateAt }) {
   const chapters = useStore(s => s.chapters)
   const scrollRef = useRef(null)
   const [open, setOpen] = useState(null) // { id, rect } du bloc cliqué
+  const closeCard = useCallback(() => setOpen(null), [])
+  const closedByPointerRef = useRef(false) // un clic dans le vide qui ferme la carte ne crée rien
   const openSlot = open ? slots.find(s => s.id === open.id) : null
 
   const grid = useMemo(() => getAgendaGridForDay(dayKey, now), [getAgendaGridForDay, dayKey, now, slots, quests])
@@ -30,6 +31,7 @@ export default function AgendaGrid({ dayKey, todayKey, now, onCreateAt }) {
   useEffect(() => {
     if (open && ![...grid.items, ...grid.before, ...grid.after].some(i => i.id === open.id)) setOpen(null)
   }, [open, grid])
+  const isEmpty = !grid.items.length && !grid.before.length && !grid.after.length
   const isToday = dayKey === todayKey
   const nowMin = minutesSinceGridStart(now)
   const showNow = isToday && nowMin >= 0 && nowMin <= (GRID_END_HOUR - GRID_START_HOUR) * 60
@@ -48,20 +50,29 @@ export default function AgendaGrid({ dayKey, todayKey, now, onCreateAt }) {
   const bandProps = { chapters, openAgendaDeadline, onOpenSlot: setOpen }
 
   return (
+    <div>
+    {isEmpty && (
+      <p data-testid="agenda-empty" className="mb-1 text-[11px] text-gray-400">
+        Aucun créneau ce jour.{onCreateAt ? ' Cliquez sur la grille pour en ajouter.' : ''}
+      </p>
+    )}
     <div className="rounded-lg border border-gray-100 dark:border-zinc-800">
     {grid.before.length > 0 && <Band testid="agenda-band-before" label="Avant 06:00" items={grid.before} {...bandProps} />}
     <div ref={scrollRef} data-testid="agenda-grid" className="relative overflow-y-auto h-72">
       <div className="relative" style={{ height: TOTAL_PX + 8 }}
+        onMouseDownCapture={() => { closedByPointerRef.current = open != null }}
         onClick={e => {
-          // Seule une zone vide déclenche la création (blocs et repères stoppent la propagation).
-          if (!onCreateAt || e.target.closest('[data-grid-item]')) return
+          // Seule une zone vide déclenche la création ; si une carte était ouverte, ce clic ne fait que la fermer.
+          const closedCard = closedByPointerRef.current
+          closedByPointerRef.current = false
+          if (closedCard || !onCreateAt || e.target.closest('[data-grid-item]')) return
           const rect = e.currentTarget.getBoundingClientRect()
           onCreateAt(slotTimesForGridClick((e.clientY - rect.top) / PX_PER_MIN))
         }}>
         {HOURS.map((h, i) => (
           <React.Fragment key={h}>
             <div className="absolute left-0 right-0 border-t border-gray-200 dark:border-zinc-700" style={{ top: i * HOUR_PX }}>
-              <span className="absolute left-1 -top-2 px-0.5 text-[9px] leading-none text-gray-400 bg-white dark:bg-zinc-900">{pad(h)}:00</span>
+              <span className="absolute left-1 -top-2 px-0.5 text-[9px] leading-none text-gray-400 bg-white dark:bg-zinc-900">{minutesToHHMM(h * 60)}</span>
             </div>
             {h < GRID_END_HOUR && (
               <div className="absolute left-9 right-0 border-t border-dashed border-gray-100 dark:border-zinc-800" style={{ top: i * HOUR_PX + HOUR_PX / 2 }} />
@@ -72,24 +83,14 @@ export default function AgendaGrid({ dayKey, todayKey, now, onCreateAt }) {
         <div className="absolute top-0 bottom-0 left-10 right-1">
           {grid.items.map(item => {
             if (item.kind === 'deadline') {
-              const tone = item.done
-                ? 'border-gray-300 dark:border-zinc-600 text-gray-400 line-through'
-                : item.expired
-                  ? 'border-red-400 dark:border-red-500/60 text-red-600 dark:text-red-400'
-                  : 'border-amber-400 dark:border-amber-500/60 text-amber-700 dark:text-amber-300'
               return (
-                <button key={item.id} type="button" data-testid="agenda-grid-deadline" data-grid-item
-                  onClick={() => openAgendaDeadline(item.questId)}
-                  title={`${item.title || 'Quête sans titre'}${item.done ? ' · validée' : item.expired ? ' · expirée' : ''}`}
-                  className={`absolute z-[5] flex items-center gap-1 px-1.5 text-left text-[11px] leading-none truncate border-t-2 border-dashed bg-white/80 dark:bg-zinc-900/80 ${tone}`}
-                  style={{ top: item.startMin * PX_PER_MIN, height: DEADLINE_PX, ...colStyle(item) }}>
-                  <span>⚑</span>
-                  <span className="truncate">{item.title || 'Quête sans titre'}{item.done ? ' · validée' : item.expired ? ' · expirée' : ''}</span>
-                </button>
+                <AgendaDeadlineButton key={item.id} item={item} onOpen={openAgendaDeadline} testid="agenda-grid-deadline"
+                  className="absolute z-[5] leading-none"
+                  style={{ top: item.startMin * PX_PER_MIN, height: DEADLINE_PX, ...colStyle(item) }} />
               )
             }
             const chapter = chapters.find(c => c.id === item.chapterId)
-            const height = Math.max(MIN_BLOCK_PX, (item.endMin - item.startMin) * PX_PER_MIN)
+            const height = item.displayMin * PX_PER_MIN // même durée d'affichage que celle des colonnes de chevauchement
             const accent = chapter?.color?.accent || '#a855f7'
             return (
               <button key={item.id} type="button" title={item.title} data-slot-id={item.id} data-grid-item
@@ -114,8 +115,9 @@ export default function AgendaGrid({ dayKey, todayKey, now, onCreateAt }) {
     </div>
     {grid.after.length > 0 && <Band testid="agenda-band-after" label="Après 23:00" items={grid.after} {...bandProps} />}
     {openSlot && (
-      <SlotPopover slot={openSlot} rect={open.rect} scrollRef={scrollRef} onClose={() => setOpen(null)} />
+      <SlotPopover slot={openSlot} rect={open.rect} scrollRef={scrollRef} onClose={closeCard} />
     )}
+    </div>
     </div>
   )
 }
@@ -129,20 +131,11 @@ function Band({ testid, label, items, chapters, openAgendaDeadline, onOpenSlot }
       <div className="text-[9px] leading-none uppercase tracking-wide text-gray-400 mb-1">{label}</div>
       <div className="flex flex-wrap gap-1">
         {items.map(item => {
-          const time = `${pad(Math.floor((item.startMin + GRID_START_HOUR * 60) / 60))}:${pad((item.startMin + GRID_START_HOUR * 60) % 60)}`
+          const time = gridMinutesToHHMM(item.startMin)
           if (item.kind === 'deadline') {
-            const tone = item.done
-              ? 'border-gray-300 dark:border-zinc-600 text-gray-400 line-through'
-              : item.expired
-                ? 'border-red-400 dark:border-red-500/60 text-red-600 dark:text-red-400'
-                : 'border-amber-400 dark:border-amber-500/60 text-amber-700 dark:text-amber-300'
             return (
-              <button key={item.id} type="button" data-testid="agenda-band-deadline" data-grid-item
-                onClick={() => openAgendaDeadline(item.questId)}
-                className={`flex-1 basis-[45%] min-w-0 flex items-center gap-1 px-1.5 py-0.5 text-left text-[11px] leading-tight truncate border-t-2 border-dashed bg-white/80 dark:bg-zinc-900/80 ${tone}`}>
-                <span>⚑</span>
-                <span className="truncate">{time} {item.title || 'Quête sans titre'}</span>
-              </button>
+              <AgendaDeadlineButton key={item.id} item={item} onOpen={openAgendaDeadline} testid="agenda-band-deadline" time={time}
+                className="flex-1 basis-[45%] min-w-0 py-0.5 leading-tight" />
             )
           }
           const accent = chapters.find(c => c.id === item.chapterId)?.color?.accent || '#a855f7'
@@ -172,7 +165,11 @@ function SlotPopover({ slot, rect, scrollRef, onClose }) {
   useEffect(() => { setAnchor(rect) }, [rect])
 
   useEffect(() => {
-    const onKey = e => { if (e.key === 'Escape') onClose() }
+    const onKey = e => {
+      if (e.key !== 'Escape') return
+      if (popRef.current?.querySelector('form')) return // édition en cours : Échap ne ferme pas la carte
+      onClose()
+    }
     const onDown = e => {
       if (popRef.current?.contains(e.target)) return
       if (e.target.closest?.('[data-slot-id]')) return // un autre bloc rouvre sa propre carte
@@ -192,11 +189,15 @@ function SlotPopover({ slot, rect, scrollRef, onClose }) {
     if (!el) return undefined
     const follow = () => {
       const b = el.querySelector(`[data-slot-id="${slotId}"]`)
-      if (b) setAnchor(b.getBoundingClientRect())
+      if (!b) return
+      const box = el.getBoundingClientRect()
+      const r = b.getBoundingClientRect()
+      if (r.bottom <= box.top || r.top >= box.bottom) onClose() // bloc sorti de la zone visible
+      else setAnchor(r)
     }
     el.addEventListener('scroll', follow)
     return () => el.removeEventListener('scroll', follow)
-  }, [scrollRef, slotId])
+  }, [scrollRef, slotId, onClose])
 
   const vw = window.innerWidth
   const vh = window.innerHeight

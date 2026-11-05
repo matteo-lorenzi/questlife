@@ -1,13 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { useStore } from '../../store/useStore'
-import { localDayKey, localTimestamp } from '../../utils/agenda'
+import { localDayKey, localTimestamp, hhmm } from '../../utils/agenda'
 
 const DATE_FMT = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
-// HH:MM zéro-complété, local : sert à l'affichage et aux <input type="time">.
-const hhmm = ts => {
-  const d = new Date(ts)
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-}
 
 const inputCls = 'w-full text-xs px-2 py-1 rounded-md border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-200'
 

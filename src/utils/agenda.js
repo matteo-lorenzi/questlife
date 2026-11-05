@@ -102,6 +102,11 @@ export function minutesSinceGridStart(ts) {
   return d.getHours() * 60 + d.getMinutes() - GRID_START_HOUR * 60;
 }
 
+// "HH:MM" d'une position de la grille (minutes depuis 06:00).
+export function gridMinutesToHHMM(minFromGridStart) {
+  return minutesToHHMM(GRID_START_HOUR * 60 + minFromGridStart);
+}
+
 // Clic sur la grille (minutes depuis 06:00) -> début arrondi à la demi-heure la plus proche,
 // fin à +1 h. Le début est borné à [06:00, 22:30] : un créneau commençant à 23:00 pile irait
 // dans la bande « Après 23:00 » et disparaîtrait de la grille juste après sa création.
