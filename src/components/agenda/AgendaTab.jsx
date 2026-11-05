@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useStore } from '../../store/useStore'
 import { localDayKey, localTimestamp } from '../../utils/agenda'
 import DeadlineRow from './DeadlineRow'
-import AgendaSlotRow, { ChapterSelect } from './AgendaSlotRow'
+import AgendaSlotRow, { ChapterSelect, ReminderField, parseReminderMinutes } from './AgendaSlotRow'
 
 const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 const MONTH_FMT = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' })
@@ -30,6 +30,7 @@ export default function AgendaTab() {
   const [start, setStart] = useState('18:00')
   const [end, setEnd] = useState('19:00')
   const [chapterId, setChapterId] = useState(null)
+  const [reminders, setReminders] = useState('')
   const [error, setError] = useState('')
 
   // `agenda` est lu pour re-render quand les créneaux changent.
@@ -73,6 +74,7 @@ export default function AgendaTab() {
       startAt: localTimestamp(day, start),
       endAt: localTimestamp(day, end),
       chapterId,
+      reminderOffsetsMs: parseReminderMinutes(reminders),
     })
     if (!result.ok) {
       setError(result.error)
@@ -81,6 +83,7 @@ export default function AgendaTab() {
     setError('')
     setTitle('')
     setChapterId(null)
+    setReminders('')
     setFormOpen(false)
     selectDay(day)
     const d = new Date(result.slot.startAt)
@@ -154,6 +157,7 @@ export default function AgendaTab() {
                 aria-label="Fin" className={inputCls} />
             </div>
             <ChapterSelect value={chapterId} onChange={setChapterId} />
+            <ReminderField value={reminders} onChange={setReminders} />
             {error && <p role="alert" className="text-xs text-red-500">{error}</p>}
             <div className="flex gap-1.5">
               <button type="submit" className="flex-1 text-xs py-1 rounded-md bg-purple-500 text-white hover:bg-purple-600">Créer</button>

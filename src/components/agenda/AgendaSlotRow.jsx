@@ -22,6 +22,24 @@ export function ChapterSelect({ value, onChange }) {
   )
 }
 
+// Rappels saisis en minutes avant le début, séparés par des virgules (ex. « 15, 60 »).
+export const parseReminderMinutes = text =>
+  String(text || '').split(/[,;\s]+/).map(v => Number.parseInt(v, 10))
+    .filter(v => Number.isFinite(v) && v > 0).map(v => v * 60000)
+export const reminderMinutesText = offsets => (offsets || []).map(ms => Math.round(ms / 60000)).join(', ')
+
+export function ReminderField({ value, onChange }) {
+  return (
+    <div>
+      <input value={value} onChange={e => onChange(e.target.value)} inputMode="numeric"
+        placeholder="Rappels (min avant), ex. 15, 60" aria-label="Rappels" className={inputCls} />
+      <p className="mt-0.5 text-[10px] text-gray-400">
+        Les rappels ne fonctionnent que si l'application est ouverte.
+      </p>
+    </div>
+  )
+}
+
 // Ligne d'un créneau : case « fait », chapitre coloré, modification et suppression.
 export default function AgendaSlotRow({ slot }) {
   const updateAgendaSlot = useStore(s => s.updateAgendaSlot)
@@ -36,6 +54,7 @@ export default function AgendaSlotRow({ slot }) {
   const [start, setStart] = useState(hhmm(slot.startAt))
   const [end, setEnd] = useState(hhmm(slot.endAt))
   const [chapterId, setChapterId] = useState(slot.chapterId)
+  const [reminders, setReminders] = useState(reminderMinutesText(slot.reminderOffsetsMs))
   const [error, setError] = useState('')
 
   function openEdit() {
@@ -44,6 +63,7 @@ export default function AgendaSlotRow({ slot }) {
     setStart(hhmm(slot.startAt))
     setEnd(hhmm(slot.endAt))
     setChapterId(slot.chapterId)
+    setReminders(reminderMinutesText(slot.reminderOffsetsMs))
     setError('')
     setEditing(true)
   }
@@ -55,6 +75,7 @@ export default function AgendaSlotRow({ slot }) {
       startAt: localTimestamp(day, start),
       endAt: localTimestamp(day, end),
       chapterId,
+      reminderOffsetsMs: parseReminderMinutes(reminders),
     })
     if (!result.ok) {
       setError(result.error)
@@ -76,6 +97,7 @@ export default function AgendaSlotRow({ slot }) {
             <input type="time" value={end} onChange={e => setEnd(e.target.value)} aria-label="Fin" className={inputCls} />
           </div>
           <ChapterSelect value={chapterId} onChange={setChapterId} />
+          <ReminderField value={reminders} onChange={setReminders} />
           {error && <p role="alert" className="text-xs text-red-500">{error}</p>}
           <div className="flex gap-1.5">
             <button type="submit" className="flex-1 text-xs py-1 rounded-md bg-purple-500 text-white hover:bg-purple-600">Enregistrer</button>
@@ -94,6 +116,9 @@ export default function AgendaSlotRow({ slot }) {
       <div className="min-w-0 flex-1">
         <p className={`text-xs font-medium truncate ${slot.done ? 'line-through text-gray-400' : ''}`}>{slot.title}</p>
         <p className="text-xs text-gray-400">{TIME_FMT.format(slot.startAt)} – {TIME_FMT.format(slot.endAt)}</p>
+        {slot.reminderOffsetsMs?.length > 0 && (
+          <p className="text-[10px] text-gray-400">Rappels : {reminderMinutesText(slot.reminderOffsetsMs)} min avant</p>
+        )}
         {chapter && (
           <span className="inline-flex items-center gap-1 mt-0.5 text-[10px] text-gray-500 dark:text-gray-400">
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: chapter.color?.accent }} />
