@@ -2,17 +2,16 @@ import React, { useState } from 'react'
 import { useStore } from '../../store/useStore'
 import { localDayKey, localTimestamp } from '../../utils/agenda'
 import DeadlineRow from './DeadlineRow'
+import AgendaSlotRow, { ChapterSelect } from './AgendaSlotRow'
 
 const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 const MONTH_FMT = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' })
-const TIME_FMT = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' })
 const DAY_FMT = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
 
 // Onglet Agenda : mini-calendrier du mois, liste du jour, formulaire de création.
 export default function AgendaTab() {
   const agenda = useStore(s => s.agenda)
   const createAgendaSlot = useStore(s => s.createAgendaSlot)
-  const duplicateAgendaSlotToNextWeek = useStore(s => s.duplicateAgendaSlotToNextWeek)
   const getAgendaItemsForDay = useStore(s => s.getAgendaItemsForDay)
   const getAgendaItemBusyDays = useStore(s => s.getAgendaItemBusyDays)
   const openAgendaDeadline = useStore(s => s.openAgendaDeadline)
@@ -30,6 +29,7 @@ export default function AgendaTab() {
   const [day, setDay] = useState(todayKey)
   const [start, setStart] = useState('18:00')
   const [end, setEnd] = useState('19:00')
+  const [chapterId, setChapterId] = useState(null)
   const [error, setError] = useState('')
 
   // `agenda` est lu pour re-render quand les créneaux changent.
@@ -72,6 +72,7 @@ export default function AgendaTab() {
       title,
       startAt: localTimestamp(day, start),
       endAt: localTimestamp(day, end),
+      chapterId,
     })
     if (!result.ok) {
       setError(result.error)
@@ -79,6 +80,7 @@ export default function AgendaTab() {
     }
     setError('')
     setTitle('')
+    setChapterId(null)
     setFormOpen(false)
     selectDay(day)
     const d = new Date(result.slot.startAt)
@@ -151,6 +153,7 @@ export default function AgendaTab() {
               <input type="time" value={end} onChange={e => setEnd(e.target.value)}
                 aria-label="Fin" className={inputCls} />
             </div>
+            <ChapterSelect value={chapterId} onChange={setChapterId} />
             {error && <p role="alert" className="text-xs text-red-500">{error}</p>}
             <div className="flex gap-1.5">
               <button type="submit" className="flex-1 text-xs py-1 rounded-md bg-purple-500 text-white hover:bg-purple-600">Créer</button>
@@ -167,14 +170,7 @@ export default function AgendaTab() {
             {items.map(s => s.kind === 'deadline' ? (
               <DeadlineRow key={s.id} item={s} onOpen={openAgendaDeadline} />
             ) : (
-              <li key={s.id} className="px-2 py-1.5 rounded-lg border border-gray-100 dark:border-zinc-800">
-                <p className="text-xs font-medium truncate">{s.title}</p>
-                <p className="text-xs text-gray-400">
-                  {TIME_FMT.format(s.startAt)} – {TIME_FMT.format(s.endAt)}
-                </p>
-                <button type="button" onClick={() => duplicateAgendaSlotToNextWeek(s.id)}
-                  className="mt-1 text-[11px] text-purple-500 hover:underline">Dupliquer à la semaine suivante</button>
-              </li>
+              <AgendaSlotRow key={s.id} slot={s} />
             ))}
           </ul>
         )}
