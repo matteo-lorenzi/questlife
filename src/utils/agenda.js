@@ -119,3 +119,34 @@ export function buildGridItems(slots, dayKey) {
     .filter((i) => i.endMin > 0 && i.startMin < max)
     .map((i) => ({ ...i, startMin: Math.max(0, i.startMin), endMin: Math.min(max, i.endMin) }));
 }
+
+// Durées minimales d'affichage (en minutes) : un bloc court ou une deadline reste visible et cliquable.
+export const MIN_SLOT_DISPLAY_MIN = 25;
+export const DEADLINE_DISPLAY_MIN = 23;
+
+// Place les éléments chevauchants côte à côte. `items` triés par startMin.
+// Ajoute `col` (colonne, 0-based) et `cols` (nombre de colonnes du groupe de chevauchements enchaînés).
+export function assignOverlapColumns(items) {
+  const displayEnd = (i) =>
+    i.startMin + Math.max(i.kind === "deadline" ? DEADLINE_DISPLAY_MIN : MIN_SLOT_DISPLAY_MIN, i.endMin - i.startMin);
+  const out = [];
+  let group = [];
+  let colEnds = [];
+  let groupEnd = -Infinity;
+  const flush = () => {
+    group.forEach((g) => out.push({ ...g, cols: colEnds.length }));
+    group = [];
+    colEnds = [];
+  };
+  for (const item of items) {
+    if (group.length && item.startMin >= groupEnd) flush();
+    let col = colEnds.findIndex((end) => end <= item.startMin);
+    if (col === -1) col = colEnds.length;
+    const end = displayEnd(item);
+    colEnds[col] = end;
+    groupEnd = group.length ? Math.max(groupEnd, end) : end;
+    group.push({ ...item, col });
+  }
+  flush();
+  return out;
+}

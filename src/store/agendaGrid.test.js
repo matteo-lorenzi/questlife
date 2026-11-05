@@ -115,3 +115,61 @@ describe("getAgendaGridForDay with quest deadlines", () => {
     expect(byTitle["Validée"]).toMatchObject({ expired: false, done: true });
   });
 });
+
+describe("getAgendaGridForDay overlap columns", () => {
+  beforeEach(() => localStorage.clear());
+  const cols = (store, day, now) =>
+    Object.fromEntries(store.getState().getAgendaGridForDay(day, now).items.map((i) => [i.title, [i.col, i.cols]]));
+
+  it("gives full width to items that do not overlap, even when back to back", async () => {
+    const store = await freshStore();
+    clearDeadlines(store);
+    store.getState().createAgendaSlot({ title: "A", startAt: at(2030, 5, 10, 9), endAt: at(2030, 5, 10, 10) });
+    store.getState().createAgendaSlot({ title: "B", startAt: at(2030, 5, 10, 10), endAt: at(2030, 5, 10, 11) });
+    store.getState().createAgendaSlot({ title: "C", startAt: at(2030, 5, 10, 15), endAt: at(2030, 5, 10, 16) });
+    expect(cols(store, "2030-05-10")).toEqual({ A: [0, 1], B: [0, 1], C: [0, 1] });
+  });
+
+  it("puts two simultaneous slots side by side", async () => {
+    const store = await freshStore();
+    clearDeadlines(store);
+    store.getState().createAgendaSlot({ title: "A", startAt: at(2030, 5, 10, 9), endAt: at(2030, 5, 10, 10) });
+    store.getState().createAgendaSlot({ title: "B", startAt: at(2030, 5, 10, 9, 30), endAt: at(2030, 5, 10, 10, 30) });
+    expect(cols(store, "2030-05-10")).toEqual({ A: [0, 2], B: [1, 2] });
+  });
+
+  it("does not hide a slot behind a deadline falling inside it", async () => {
+    const store = await freshStore();
+    clearDeadlines(store);
+    store.getState().createAgendaSlot({ title: "Cours", startAt: at(2030, 5, 10, 9), endAt: at(2030, 5, 10, 11) });
+    addQuest(store, { title: "Rendu", deadlineAt: at(2030, 5, 10, 10), deadlineMode: "absolute" });
+    expect(cols(store, "2030-05-10", at(2030, 5, 1))).toEqual({ Cours: [0, 2], Rendu: [1, 2] });
+  });
+
+  it("treats a deadline as an item of minimum display duration", async () => {
+    const store = await freshStore();
+    clearDeadlines(store);
+    store.getState().createAgendaSlot({ title: "Cours", startAt: at(2030, 5, 10, 9), endAt: at(2030, 5, 10, 10) });
+    addQuest(store, { title: "Juste apres", deadlineAt: at(2030, 5, 10, 10, 30), deadlineMode: "absolute" });
+    addQuest(store, { title: "Pile dessus", deadlineAt: at(2030, 5, 10, 9, 59), deadlineMode: "absolute" });
+    expect(cols(store, "2030-05-10", at(2030, 5, 1))).toEqual({
+      Cours: [0, 2], "Pile dessus": [1, 2], "Juste apres": [0, 1],
+    });
+  });
+
+  it("shares the column count across a chain of overlaps and reuses free columns", async () => {
+    const store = await freshStore();
+    clearDeadlines(store);
+    store.getState().createAgendaSlot({ title: "A", startAt: at(2030, 5, 10, 9), endAt: at(2030, 5, 10, 10) });
+    store.getState().createAgendaSlot({ title: "B", startAt: at(2030, 5, 10, 9, 30), endAt: at(2030, 5, 10, 10, 30) });
+    store.getState().createAgendaSlot({ title: "C", startAt: at(2030, 5, 10, 10, 15), endAt: at(2030, 5, 10, 11) });
+    expect(cols(store, "2030-05-10")).toEqual({ A: [0, 2], B: [1, 2], C: [0, 2] });
+  });
+
+  it("still allows creating overlapping slots", async () => {
+    const store = await freshStore();
+    store.getState().createAgendaSlot({ title: "A", startAt: at(2030, 5, 10, 9), endAt: at(2030, 5, 10, 10) });
+    store.getState().createAgendaSlot({ title: "B", startAt: at(2030, 5, 10, 9), endAt: at(2030, 5, 10, 10) });
+    expect(store.getState().agenda.slots).toHaveLength(2);
+  });
+});
