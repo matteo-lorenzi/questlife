@@ -6,6 +6,7 @@ import ReactFlow, {
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { useStore } from '../../store/useStore'
+import { useMainView } from '../../store/useMainView'
 import QuestNode from '../quest/QuestNode'
 import LeftPanel from '../panel/LeftPanel'
 import { tabsForView } from '../panel/tabs'
@@ -112,7 +113,8 @@ export default function CanvasView({ chapter }) {
 
   return (
     <div className="flex flex-1 overflow-hidden">
-      <LeftPanel tabs={tabsForView('chapter')} defaultTab="quests" tabProps={{ onQuickCreate: handleQuickCreate }} />
+      <LeftPanel tabs={tabsForView('chapter')} defaultTab="quests" tabProps={{ onQuickCreate: handleQuickCreate }}
+        onSelectMainTab={id => { useMainView.getState().setMainView(id); useStore.getState().setActiveChapter(null) }} />
       <div
         ref={canvasRef}
         className="flex-1 relative"
