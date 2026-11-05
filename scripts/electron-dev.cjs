@@ -25,7 +25,7 @@ const binDir = path.join(__dirname, "..", "node_modules", ".bin");
 const pathKey = Object.keys(env).find((k) => k.toLowerCase() === "path") || "PATH";
 env[pathKey] = `${binDir}${path.delimiter}${env[pathKey] || ""}`;
 
-const concurrentlyBin = require.resolve("concurrently/dist/bin/concurrently.js");
+const concurrentlyBin = require("./resolve-bin.cjs").resolveBin("concurrently");
 const child = spawn(
   process.execPath,
   [concurrentlyBin, "-k", "vite --strictPort", "wait-on http://localhost:5173 && electron ."],
