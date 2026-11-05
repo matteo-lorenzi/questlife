@@ -173,3 +173,54 @@ describe("getAgendaGridForDay overlap columns", () => {
     expect(store.getState().agenda.slots).toHaveLength(2);
   });
 });
+
+describe("getAgendaGridForDay out-of-range items", () => {
+  beforeEach(() => localStorage.clear());
+  const grid = (store, day = "2030-05-10") => store.getState().getAgendaGridForDay(day, at(2030, 5, 1));
+
+  it("truncates a slot straddling 06:00 with a marker and keeps it out of the bands", async () => {
+    const store = await freshStore();
+    clearDeadlines(store);
+    store.getState().createAgendaSlot({ title: "Tôt", startAt: at(2030, 5, 10, 5), endAt: at(2030, 5, 10, 7) });
+    const g = grid(store);
+    expect(g.items).toHaveLength(1);
+    expect(g.items[0]).toMatchObject({ title: "Tôt", startMin: 0, endMin: 60, startMarker: "↑ dès 05:00" });
+    expect(g.items[0].endMarker).toBeUndefined();
+    expect(g.before).toEqual([]);
+    expect(g.after).toEqual([]);
+  });
+
+  it("truncates a slot straddling 23:00 with a marker and keeps it out of the bands", async () => {
+    const store = await freshStore();
+    clearDeadlines(store);
+    store.getState().createAgendaSlot({ title: "Tard", startAt: at(2030, 5, 10, 22, 30), endAt: at(2030, 5, 10, 23, 45) });
+    const g = grid(store);
+    expect(g.items[0]).toMatchObject({ title: "Tard", startMin: 990, endMin: 1020, endMarker: "↓ jusqu'à 23:45" });
+    expect(g.items[0].startMarker).toBeUndefined();
+    expect(g.before).toEqual([]);
+    expect(g.after).toEqual([]);
+  });
+
+  it("puts items entirely before 06:00 only in the top band, and after 23:00 only in the bottom band", async () => {
+    const store = await freshStore();
+    clearDeadlines(store);
+    store.getState().createAgendaSlot({ title: "Aube", startAt: at(2030, 5, 10, 4), endAt: at(2030, 5, 10, 5, 30) });
+    store.getState().createAgendaSlot({ title: "Nuit", startAt: at(2030, 5, 10, 23, 15), endAt: at(2030, 5, 10, 23, 45) });
+    addQuest(store, { title: "Rendu tôt", deadlineAt: at(2030, 5, 10, 5), deadlineMode: "absolute" });
+    addQuest(store, { title: "Rendu tard", deadlineAt: at(2030, 5, 10, 23, 30), deadlineMode: "absolute" });
+    const g = grid(store);
+    expect(g.items).toEqual([]);
+    expect(g.before.map((i) => [i.kind, i.title])).toEqual([["slot", "Aube"], ["deadline", "Rendu tôt"]]);
+    expect(g.after.map((i) => [i.kind, i.title])).toEqual([["slot", "Nuit"], ["deadline", "Rendu tard"]]);
+    expect(g.before[1]).toMatchObject({ questId: expect.any(String), expired: false });
+  });
+
+  it("returns empty bands when nothing is out of range", async () => {
+    const store = await freshStore();
+    clearDeadlines(store);
+    store.getState().createAgendaSlot({ title: "Jour", startAt: at(2030, 5, 10, 9), endAt: at(2030, 5, 10, 10) });
+    const g = grid(store);
+    expect(g.before).toEqual([]);
+    expect(g.after).toEqual([]);
+  });
+});

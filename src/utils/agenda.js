@@ -102,12 +102,18 @@ export function slotTimesForGridClick(minFromGridStart) {
 }
 
 // Créneaux d'un jour local placés dans la grille (début/fin en minutes depuis 06:00).
-// Les éléments entièrement hors plage sont exclus ici ; la troncature marquée et les
-// bandes relèvent de tickets suivants.
+// Un créneau à cheval sur la plage est tronqué avec un marqueur (startMarker / endMarker) ;
+// un créneau entièrement hors plage va dans `before` (≤ 06:00) ou `after` (≥ 23:00).
 export function buildGridItems(slots, dayKey) {
   const max = (GRID_END_HOUR - GRID_START_HOUR) * 60;
-  return sortSlots(slots.filter((s) => localDayKey(s.startAt) === dayKey))
-    .map((s) => ({
+  const hhmm = (ts) => {
+    const d = new Date(ts);
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  };
+  const result = { items: [], before: [], after: [] };
+  const sameDay = sortSlots(slots.filter((s) => localDayKey(s.startAt) === dayKey));
+  for (const s of sameDay) {
+    const item = {
       kind: "slot",
       id: s.id,
       title: s.title,
@@ -115,9 +121,17 @@ export function buildGridItems(slots, dayKey) {
       done: s.done,
       startMin: minutesSinceGridStart(s.startAt),
       endMin: minutesSinceGridStart(s.endAt),
-    }))
-    .filter((i) => i.endMin > 0 && i.startMin < max)
-    .map((i) => ({ ...i, startMin: Math.max(0, i.startMin), endMin: Math.min(max, i.endMin) }));
+    };
+    if (item.endMin <= 0) result.before.push(item);
+    else if (item.startMin >= max) result.after.push(item);
+    else {
+      const placed = { ...item, startMin: Math.max(0, item.startMin), endMin: Math.min(max, item.endMin) };
+      if (item.startMin < 0) placed.startMarker = `↑ dès ${hhmm(s.startAt)}`;
+      if (item.endMin > max) placed.endMarker = `↓ jusqu'à ${hhmm(s.endAt)}`;
+      result.items.push(placed);
+    }
+  }
+  return result;
 }
 
 // Durées minimales d'affichage (en minutes) : un bloc court ou une deadline reste visible et cliquable.

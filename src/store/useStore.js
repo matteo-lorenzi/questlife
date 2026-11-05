@@ -416,11 +416,15 @@ export const useStore = create((set, get) => ({
   // Grille horaire d'un jour local : créneaux en minutes depuis 06:00 (aucun pixel).
   getAgendaGridForDay(dayKey, now = Date.now()) {
     const { agenda, quests } = get();
-    const sorted = [
-      ...buildGridItems(agenda.slots, dayKey),
-      ...buildGridDeadlines(questDeadlineItems(quests, now), dayKey),
-    ].sort((a, b) => a.startMin - b.startMin);
-    return { items: assignOverlapColumns(sorted) };
+    const slots = buildGridItems(agenda.slots, dayKey);
+    const deadlines = buildGridDeadlines(questDeadlineItems(quests, now), dayKey);
+    const byTime = (a, b) => a.startMin - b.startMin;
+    return {
+      items: assignOverlapColumns([...slots.items, ...deadlines.items].sort(byTime)),
+      // Bandes fixes : éléments entièrement avant 06:00 / après 23:00.
+      before: [...slots.before, ...deadlines.before].sort(byTime),
+      after: [...slots.after, ...deadlines.after].sort(byTime),
+    };
   },
 
   // Jours locaux ayant au moins un créneau ou une deadline.
