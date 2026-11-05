@@ -17,6 +17,7 @@ Usage : mono-utilisateur, usage personnel, 100 % front-end. Pas de backend, pas 
 | State global | Zustand 4 |
 | Style | Tailwind CSS 3 |
 | Persistance | LocalStorage (`questlife_data`) |
+| Tests | Vitest + jsdom (`npm test`), pas de React Testing Library |
 | IDs | nanoid |
 | Toasts | react-hot-toast |
 
@@ -30,13 +31,21 @@ src/
 ├── store/useStore.js                # Store Zustand unique (chapitres, quêtes, profil)
 ├── utils/constants.js               # CHAPTER_COLORS, CHAPTER_ICONS, XP_LEVELS, BADGE_DEFS, WEEKLY_OBJECTIVES
 ├── utils/graph.js                   # wouldCreateCycle(), recomputeStatuses(), getDependents()
+├── utils/agenda.js                  # Agenda pur : localDayKey, localTimestamp, validateSlotInput, normalizeAgenda, shiftLocalDays, sortSlots
+├── utils/agendaDeadlines.js         # questDeadlineItems(), mergeDayItems() (deadlines de quêtes vues comme éléments d'agenda)
+├── utils/panelPrefs.js              # loadPanelPrefs(), savePanelPrefs() (clé `questlife_left_panel`)
 ├── assets/icons/ChapterIcon.jsx     # SVG icons renderer
 └── components/
     ├── ui/index.jsx                 # Btn, Modal, ConfirmModal, ProgressBar, Input, Textarea
     ├── chapters/ChapterCard.jsx     # Carte chapitre avec menu contextuel
     ├── chapters/ChapterModal.jsx    # Modal création/édition chapitre
     ├── quest/QuestNode.jsx          # Nœud React Flow (mémoïsé)
-    ├── quest/QuestSidebar.jsx       # Sidebar drag-source (3 types)
+    ├── quest/QuestSidebar.jsx       # Contenu de l'onglet « Quêtes » : drag-source (3 types) + ajout au clic
+    ├── panel/LeftPanel.jsx          # Panneau gauche à onglets, réductible, préférences mémorisées
+    ├── panel/tabs.js                # Registre LEFT_PANEL_TABS [{id, label, component, views}] + tabsForView(view)
+    ├── agenda/AgendaTab.jsx         # Onglet Agenda : mini-calendrier, liste du jour, formulaire de création
+    ├── agenda/AgendaSlotRow.jsx     # Ligne de créneau : fait, modifier, supprimer, dupliquer ; ChapterSelect, ReminderField
+    ├── agenda/DeadlineRow.jsx       # Ligne de deadline de quête (lecture seule, clic = ouvre la quête)
     ├── editor/QuestPanel.jsx        # Panel éditeur droit (slide-in)
     ├── navigation/ChapterSwitcher.jsx # Dropdown navigation rapide
     ├── profile/ProfilePage.jsx      # Page compte utilisateur (pseudo, XP, badges, stats)
@@ -46,6 +55,8 @@ src/
     ├── layout/ChapterHeader.jsx     # Header vue arbre
     └── layout/CanvasView.jsx        # React Flow canvas principal
 ```
+
+Tests (Vitest, `include: src/**/*.test.js`, fuseau `Europe/Paris` fixé dans `vite.config.js`) : `src/utils/graph.test.js` et `src/store/agenda*.test.js` (agenda, agendaManage, agendaDuplicate, agendaDeadlines, agendaReminders), écrits via l'API publique du store.
 
 ---
 
@@ -114,6 +125,36 @@ src/
 }
 ```
 
+### Agenda (champ `agenda` de `questlife_data`)
+```js
+agenda: {
+  slots: AgendaSlot[],
+}
+```
+
+### AgendaSlot (créneau de révision)
+```js
+{
+  id: string,                    // nanoid
+  title: string,                 // obligatoire, trimé
+  startAt: number,               // timestamp
+  endAt: number,                 // timestamp, strictement > startAt, même jour LOCAL que startAt
+  chapterId: string | null,      // lien optionnel vers un chapitre (jamais une quête)
+  done: boolean,                 // case « fait » : AUCUN effet sur XP, série, objectifs, badges
+  reminderOffsetsMs: number[],   // rappels : ms avant startAt (min 60 000, dédoublonnés, triés décroissant, 8 max)
+  sentReminderOffsetsMs: number[], // décalages déjà notifiés (anti-doublon)
+  createdAt: number,
+}
+```
+- Pas de récurrence ni de version de schéma. Chevauchements et créneaux passés autorisés.
+- **Jours en heure locale** : utiliser `localDayKey(ts)` (`YYYY-MM-DD`) de `utils/agenda.js`, jamais `getISODate()` du store (jour UTC).
+- `normalizeAgenda()` est tolérante au chargement : sauvegarde sans `agenda` valide, créneaux invalides ignorés, ids dupliqués régénérés.
+- Supprimer un chapitre **conserve** ses créneaux et remet `chapterId` à `null`.
+- Les deadlines de quêtes (`quest.deadlineAt`) ne sont pas stockées dans `agenda` : `questDeadlineItems()` les projette en éléments `{ kind: 'deadline', questId, at, done, expired, ... }`, en lecture seule.
+
+### Préférences du panneau gauche (hors `questlife_data`)
+Clé `localStorage` **`questlife_left_panel`** : `{ collapsed: boolean, activeTab: string | null }`, via `loadPanelPrefs()` / `savePanelPrefs()`. Lecture/écriture tolérantes (stockage indisponible ou JSON invalide = valeurs par défaut). Onglet par défaut si `activeTab` est absent ou indisponible dans la vue : `agenda` sur l'accueil, `quests` dans la vue chapitre.
+
 ---
 
 ## Store Zustand — API principale
@@ -136,6 +177,18 @@ const {
   activeChapterId, selectedQuestId, isPanelOpen,
   selectQuest(id), closePanel(),
   saveViewport(chapterId, viewport), canvasViewports,
+
+  // Agenda (créneaux de révision ; jours en heure locale)
+  agenda,                         // { slots }
+  createAgendaSlot({ title, startAt, endAt, chapterId?, reminderOffsetsMs? }), // -> { ok, slot } | { ok: false, error }
+  updateAgendaSlot(id, patch),    // patch partiel ; déplacer ou changer les rappels réarme les rappels
+  deleteAgendaSlot(id),
+  toggleAgendaSlotDone(id),
+  duplicateAgendaSlotToNextWeek(id), // même heure locale +7 j, non fait, rappels réarmés
+  getAgendaSlotsForDay(dayKey), getAgendaBusyDays(),
+  getAgendaItemsForDay(dayKey), getAgendaItemBusyDays(), // créneaux + deadlines de quêtes
+  openAgendaDeadline(questId),    // ouvre le chapitre et sélectionne la quête
+  checkAgendaRemindersAndEmitAlerts(now), // appelé avec checkDeadlinesAndEmitAlerts toutes les 30 s (App.jsx)
 
   // Profil
   profile,
@@ -161,6 +214,10 @@ Toute modification appelle `get()._persist()` automatiquement → pas besoin de 
 **Recalcul automatique :** après toute modification de dépendance ou complétion, appeler `recomputeStatuses(chapterQuests)` depuis `utils/graph.js`.
 
 **Détection de cycle :** avant d'accepter un lien A→B (A est prérequis de B), appeler `wouldCreateCycle(quests, A, B)`. Si `true`, rejeter et émettre `window.dispatchEvent(new CustomEvent('questlife:toast', { detail: { msg: '...', type: 'error' } }))`.
+
+**Rappels de créneaux :** même boucle de 30 s (`App.jsx`) et mêmes canaux que les deadlines de quêtes (toast `questlife:toast` + notification desktop `questlife:system-notify`). Un rappel part une seule fois par décalage (`sentReminderOffsetsMs`), jamais pour un créneau déjà commencé ou « fait ». Application ouverte uniquement. Saisie dans l'UI en minutes avant le début.
+
+**Agenda et XP :** aucune XP pour l'agenda (voir `docs/BACKLOG.md`). Ne pas brancher les créneaux sur `xpHistory`, `streak`, `weeklyObjectives` ni les badges.
 
 **XP :** crédités au profil à la complétion uniquement. Jamais retirés, même si la quête est supprimée ensuite.
 
@@ -248,6 +305,7 @@ Les badges sont vérifiés via `get()._checkBadges()` après chaque `completeQue
 - **Fermeture du panel** = sauvegarde automatique (appeler `saveField()` ou `updateQuest()`)
 - **Nœud draft** : si panel fermé avec titre vide → `deleteQuest(id)` silencieux
 - **Canvas** : position + zoom mémorisés par chapitre dans `canvasViewports`, restaurés à la réouverture
+- **Panneau gauche** : présent sur l'accueil et dans la vue chapitre. Onglet « Agenda » (les deux vues) et « Quêtes » (vue chapitre seule : le glisser-déposer de quêtes n'y marche que là). Réductible ; ajouter un onglet = une entrée dans `panel/tabs.js`
 - **Échap** : 1er appui = ferme panel, 2e appui = retour accueil (`setActiveChapter(null)`)
 - **Drop sur canvas** : lire `e.dataTransfer.getData('quest_type')`, convertir coords avec `rfInstance.screenToFlowPosition()`
 - **Page Compte** : accessible depuis un bouton/icône dans le header de la page d'accueil. Pas de route dédiée en v1 — affichage en modal pleine page ou panneau latéral.
