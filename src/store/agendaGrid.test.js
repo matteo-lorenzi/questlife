@@ -46,3 +46,53 @@ describe("getAgendaGridForDay", () => {
     expect(store.getState().getAgendaGridForDay("2026-10-25").items[0]).toMatchObject({ startMin: 60, endMin: 120 });
   });
 });
+
+// Quest created through the store, then patched (deadline, status).
+function addQuest(store, patch) {
+  const chapterId = store.getState().chapters[0].id;
+  store.getState().createQuest(chapterId, { x: 0, y: 0 });
+  const quests = store.getState().quests;
+  const q = quests[quests.length - 1];
+  store.setState({ quests: quests.map((x) => (x.id === q.id ? { ...x, ...patch } : x)) });
+  return q.id;
+}
+
+function clearDeadlines(store) {
+  store.setState({
+    quests: store.getState().quests.map((q) => ({ ...q, deadlineAt: null, deadlineMode: "none" })),
+  });
+}
+
+describe("getAgendaGridForDay with quest deadlines", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("places a deadline of the day as a one-line marker at its time, among slots", async () => {
+    const store = await freshStore();
+    clearDeadlines(store);
+    store.getState().createAgendaSlot({ title: "Matin", startAt: at(2030, 5, 10, 9), endAt: at(2030, 5, 10, 10) });
+    const id = addQuest(store, { title: "Rendu", deadlineAt: at(2030, 5, 10, 14, 30), deadlineMode: "absolute" });
+
+    const items = store.getState().getAgendaGridForDay("2030-05-10", at(2030, 5, 1)).items;
+    expect(items.map((i) => [i.kind, i.title])).toEqual([["slot", "Matin"], ["deadline", "Rendu"]]);
+    expect(items[1]).toMatchObject({ questId: id, startMin: 510, endMin: 510, expired: false, done: false });
+  });
+
+  it("ignores deadlines of another day", async () => {
+    const store = await freshStore();
+    clearDeadlines(store);
+    addQuest(store, { title: "Demain", deadlineAt: at(2030, 5, 11, 14), deadlineMode: "absolute" });
+    expect(store.getState().getAgendaGridForDay("2030-05-10").items).toEqual([]);
+  });
+
+  it("marks past deadlines expired and keeps validated quests done", async () => {
+    const store = await freshStore();
+    clearDeadlines(store);
+    addQuest(store, { title: "Passée", deadlineAt: at(2001, 1, 2, 12), deadlineMode: "absolute" });
+    addQuest(store, { title: "Validée", deadlineAt: at(2001, 1, 2, 13), deadlineMode: "absolute", status: "done" });
+    const byTitle = Object.fromEntries(
+      store.getState().getAgendaGridForDay("2001-01-02", at(2001, 1, 2, 13, 30)).items.map((i) => [i.title, i]),
+    );
+    expect(byTitle["Passée"]).toMatchObject({ expired: true, done: false });
+    expect(byTitle["Validée"]).toMatchObject({ expired: false, done: true });
+  });
+});

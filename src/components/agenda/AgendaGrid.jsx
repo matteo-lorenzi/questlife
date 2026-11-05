@@ -4,6 +4,7 @@ import { GRID_START_HOUR, GRID_END_HOUR, minutesSinceGridStart } from '../../uti
 
 const HOUR_PX = 48
 const MIN_BLOCK_PX = 20
+const DEADLINE_PX = 18
 const PX_PER_MIN = HOUR_PX / 60
 const HOURS = Array.from({ length: GRID_END_HOUR - GRID_START_HOUR + 1 }, (_, i) => GRID_START_HOUR + i)
 const TOTAL_PX = (GRID_END_HOUR - GRID_START_HOUR) * HOUR_PX
@@ -13,10 +14,12 @@ const pad = n => String(n).padStart(2, '0')
 export default function AgendaGrid({ dayKey, todayKey, now }) {
   const getAgendaGridForDay = useStore(s => s.getAgendaGridForDay)
   const slots = useStore(s => s.agenda.slots) // re-render quand les créneaux changent
+  const quests = useStore(s => s.quests) // re-render quand les deadlines changent
+  const openAgendaDeadline = useStore(s => s.openAgendaDeadline)
   const chapters = useStore(s => s.chapters)
   const scrollRef = useRef(null)
 
-  const grid = useMemo(() => getAgendaGridForDay(dayKey, now), [getAgendaGridForDay, dayKey, now, slots])
+  const grid = useMemo(() => getAgendaGridForDay(dayKey, now), [getAgendaGridForDay, dayKey, now, slots, quests])
   const isToday = dayKey === todayKey
   const nowMin = minutesSinceGridStart(now)
   const showNow = isToday && nowMin >= 0 && nowMin <= (GRID_END_HOUR - GRID_START_HOUR) * 60
@@ -49,6 +52,23 @@ export default function AgendaGrid({ dayKey, todayKey, now }) {
 
         <div className="absolute top-0 bottom-0 left-10 right-1">
           {grid.items.map(item => {
+            if (item.kind === 'deadline') {
+              const tone = item.done
+                ? 'border-gray-300 dark:border-zinc-600 text-gray-400 line-through'
+                : item.expired
+                  ? 'border-red-400 dark:border-red-500/60 text-red-600 dark:text-red-400'
+                  : 'border-amber-400 dark:border-amber-500/60 text-amber-700 dark:text-amber-300'
+              return (
+                <button key={item.id} type="button" data-testid="agenda-grid-deadline"
+                  onClick={() => openAgendaDeadline(item.questId)}
+                  title={`${item.title || 'Quête sans titre'}${item.done ? ' · validée' : item.expired ? ' · expirée' : ''}`}
+                  className={`absolute left-0 right-0 z-[5] flex items-center gap-1 px-1.5 text-left text-[11px] leading-none truncate border-t-2 border-dashed bg-white/80 dark:bg-zinc-900/80 ${tone}`}
+                  style={{ top: item.startMin * PX_PER_MIN, height: DEADLINE_PX }}>
+                  <span>⚑</span>
+                  <span className="truncate">{item.title || 'Quête sans titre'}{item.done ? ' · validée' : item.expired ? ' · expirée' : ''}</span>
+                </button>
+              )
+            }
             const chapter = chapters.find(c => c.id === item.chapterId)
             const height = Math.max(MIN_BLOCK_PX, (item.endMin - item.startMin) * PX_PER_MIN)
             const accent = chapter?.color?.accent || '#a855f7'

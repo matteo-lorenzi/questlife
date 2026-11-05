@@ -1,6 +1,6 @@
 // Deadlines de quêtes vues comme éléments d'agenda (lecture seule). Jours LOCAUX.
 import { QUEST_STATUS } from "./constants";
-import { localDayKey } from "./agenda";
+import { localDayKey, minutesSinceGridStart, GRID_START_HOUR, GRID_END_HOUR } from "./agenda";
 
 // Une deadline par quête ayant une échéance. `done` : quête validée (jamais urgente).
 // `expired` : échéance dépassée (ou quête expirée) et quête non validée.
@@ -20,6 +20,16 @@ export function questDeadlineItems(quests, now = Date.now()) {
         expired: !done && (q.status === QUEST_STATUS.EXPIRED || q.deadlineAt <= now),
       };
     });
+}
+
+// Deadlines d'un jour local comme repères d'une ligne de la grille (startMin === endMin).
+// Celles hors de la plage 06:00-23:00 sont exclues ici (bandes : ticket suivant).
+export function buildGridDeadlines(deadlines, dayKey) {
+  const max = (GRID_END_HOUR - GRID_START_HOUR) * 60;
+  return deadlines
+    .filter((d) => localDayKey(d.at) === dayKey)
+    .map((d) => ({ ...d, startMin: minutesSinceGridStart(d.at), endMin: minutesSinceGridStart(d.at) }))
+    .filter((d) => d.startMin >= 0 && d.startMin <= max);
 }
 
 // Éléments d'un jour (créneaux + deadlines) triés par heure.
