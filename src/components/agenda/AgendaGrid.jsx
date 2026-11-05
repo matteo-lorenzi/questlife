@@ -11,6 +11,8 @@ const PX_PER_MIN = HOUR_PX / 60
 const HOURS = Array.from({ length: GRID_END_HOUR - GRID_START_HOUR + 1 }, (_, i) => GRID_START_HOUR + i)
 const TOTAL_PX = (GRID_END_HOUR - GRID_START_HOUR) * HOUR_PX
 const pad = n => String(n).padStart(2, '0')
+// Largeur et décalage horizontal d'un élément selon sa colonne de chevauchement.
+const colStyle = item => ({ left: `${(item.col / item.cols) * 100}%`, width: `${100 / item.cols}%` })
 
 // Grille horaire en lecture seule : un jour, axe 06:00-23:00, 48 px par heure.
 export default function AgendaGrid({ dayKey, todayKey, now, onCreateAt }) {
@@ -76,8 +78,8 @@ export default function AgendaGrid({ dayKey, todayKey, now, onCreateAt }) {
                 <button key={item.id} type="button" data-testid="agenda-grid-deadline" data-grid-item
                   onClick={() => openAgendaDeadline(item.questId)}
                   title={`${item.title || 'Quête sans titre'}${item.done ? ' · validée' : item.expired ? ' · expirée' : ''}`}
-                  className={`absolute left-0 right-0 z-[5] flex items-center gap-1 px-1.5 text-left text-[11px] leading-none truncate border-t-2 border-dashed bg-white/80 dark:bg-zinc-900/80 ${tone}`}
-                  style={{ top: item.startMin * PX_PER_MIN, height: DEADLINE_PX }}>
+                  className={`absolute z-[5] flex items-center gap-1 px-1.5 text-left text-[11px] leading-none truncate border-t-2 border-dashed bg-white/80 dark:bg-zinc-900/80 ${tone}`}
+                  style={{ top: item.startMin * PX_PER_MIN, height: DEADLINE_PX, ...colStyle(item) }}>
                   <span>⚑</span>
                   <span className="truncate">{item.title || 'Quête sans titre'}{item.done ? ' · validée' : item.expired ? ' · expirée' : ''}</span>
                 </button>
@@ -89,8 +91,8 @@ export default function AgendaGrid({ dayKey, todayKey, now, onCreateAt }) {
             return (
               <button key={item.id} type="button" title={item.title} data-slot-id={item.id} data-grid-item
                 onClick={e => setOpen({ id: item.id, rect: e.currentTarget.getBoundingClientRect() })}
-                className="absolute left-0 right-0 overflow-hidden rounded-md px-1.5 py-0.5 text-left text-[11px] leading-tight text-gray-800 dark:text-gray-100 bg-purple-100/80 dark:bg-zinc-800 cursor-pointer"
-                style={{ top: item.startMin * PX_PER_MIN, height, borderLeft: `3px solid ${accent}`, backgroundColor: `${accent}26` }}>
+                className="absolute overflow-hidden rounded-md px-1.5 py-0.5 text-left text-[11px] leading-tight text-gray-800 dark:text-gray-100 bg-purple-100/80 dark:bg-zinc-800 cursor-pointer"
+                style={{ top: item.startMin * PX_PER_MIN, height, ...colStyle(item), borderLeft: `3px solid ${accent}`, backgroundColor: `${accent}26` }}>
                 <span className={`font-medium ${item.done ? 'line-through opacity-60' : ''}`}>{item.title}</span>
               </button>
             )
