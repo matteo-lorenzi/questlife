@@ -23,5 +23,16 @@ export default [
   {
     files: ["electron/**/*.cjs", "scripts/**/*.cjs"],
     languageOptions: { ecmaVersion: "latest", sourceType: "commonjs", globals: globals.node },
+    rules: {
+      // Les paquets à champ `exports` refusent les sous-chemins (ERR_PACKAGE_PATH_NOT_EXPORTED).
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "CallExpression[callee.object.name='require'][callee.property.name='resolve'][arguments.0.value=/^(@[a-z0-9._-]+[/][a-z0-9._-]+|[a-z0-9_-][a-z0-9._-]*)[/]./]",
+          message: "require.resolve sur un sous-chemin de paquet casse avec `exports` : utiliser resolveBin() de scripts/resolve-bin.cjs.",
+        },
+      ],
+    },
   },
 ];
