@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { daySlots } from "./agendaTestHelpers";
 
 // Public store API only. TZ is fixed to Europe/Paris in vite.config.js.
 async function freshStore(savedData) {
@@ -29,14 +30,15 @@ describe("duplicate agenda slot to next week", () => {
 
   it("copies title, chapter, duration and reminders 7 days later, reset done/sent, original untouched", async () => {
     const store = await freshStore({ agenda: { slots: [seeded()] } });
-    const original = store.getState().getAgendaItemsForDay("2026-11-05").filter((i) => i.kind === "slot")[0];
+    const original = daySlots(store, "2026-11-05")[0];
 
     const res = store.getState().duplicateAgendaSlotToNextWeek("s1");
     expect(res.ok).toBe(true);
 
-    const copies = store.getState().getAgendaItemsForDay("2026-11-12").filter((i) => i.kind === "slot");
+    const copies = daySlots(store, "2026-11-12");
     expect(copies).toHaveLength(1);
-    const copy = copies[0];
+    expect(copies[0]).toMatchObject({ startMin: 720, endMin: 810 }); // 18:00-19:30 local
+    const copy = store.getState().agenda.slots.find((s) => s.id === copies[0].id);
     expect(copy.id).not.toBe("s1");
     expect(copy).toMatchObject({
       title: "Réviser chap. 3",
@@ -48,7 +50,7 @@ describe("duplicate agenda slot to next week", () => {
       sentReminderOffsetsMs: [],
     });
 
-    const after = store.getState().getAgendaItemsForDay("2026-11-05").filter((i) => i.kind === "slot");
+    const after = daySlots(store, "2026-11-05");
     expect(after).toHaveLength(1);
     expect(after[0]).toEqual(original);
   });
@@ -58,7 +60,9 @@ describe("duplicate agenda slot to next week", () => {
       agenda: { slots: [seeded({ startAt: at(2026, 10, 25, 18), endAt: at(2026, 10, 25, 19) })] },
     });
     store.getState().duplicateAgendaSlotToNextWeek("s1");
-    const [copy] = store.getState().getAgendaItemsForDay("2026-11-01").filter((i) => i.kind === "slot");
+    const [entry] = daySlots(store, "2026-11-01");
+    expect(entry).toMatchObject({ startMin: 720, endMin: 780 });
+    const copy = store.getState().agenda.slots.find((s) => s.id === entry.id);
     expect(copy.startAt).toBe(at(2026, 11, 1, 18));
     expect(copy.endAt).toBe(at(2026, 11, 1, 19));
     expect(new Date(copy.startAt).getHours()).toBe(18);
@@ -69,7 +73,9 @@ describe("duplicate agenda slot to next week", () => {
       agenda: { slots: [seeded({ startAt: at(2026, 3, 22, 18), endAt: at(2026, 3, 22, 19) })] },
     });
     store.getState().duplicateAgendaSlotToNextWeek("s1");
-    const [copy] = store.getState().getAgendaItemsForDay("2026-03-29").filter((i) => i.kind === "slot");
+    const [entry] = daySlots(store, "2026-03-29");
+    expect(entry).toMatchObject({ startMin: 720, endMin: 780 });
+    const copy = store.getState().agenda.slots.find((s) => s.id === entry.id);
     expect(copy.startAt).toBe(at(2026, 3, 29, 18));
     expect(new Date(copy.startAt).getHours()).toBe(18);
   });

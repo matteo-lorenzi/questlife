@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { slotTimesForGridClick, localTimestamp, GRID_START_HOUR, GRID_END_HOUR } from "../utils/agenda";
 
 async function freshStore() {
   vi.resetModules();
@@ -171,6 +172,65 @@ describe("getAgendaGridForDay overlap columns", () => {
     store.getState().createAgendaSlot({ title: "A", startAt: at(2030, 5, 10, 9), endAt: at(2030, 5, 10, 10) });
     store.getState().createAgendaSlot({ title: "B", startAt: at(2030, 5, 10, 9), endAt: at(2030, 5, 10, 10) });
     expect(store.getState().agenda.slots).toHaveLength(2);
+  });
+});
+
+describe("getAgendaGridForDay display height of truncated items", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("reserves a taller display height for a truncated slot than for a plain short one", async () => {
+    const store = await freshStore();
+    clearDeadlines(store);
+    // 05:00-06:05 -> only 5 visible minutes, but title + marker must stay readable.
+    store.getState().createAgendaSlot({ title: "Tôt", startAt: at(2030, 5, 10, 5), endAt: at(2030, 5, 10, 6, 5) });
+    store.getState().createAgendaSlot({ title: "Court", startAt: at(2030, 5, 10, 12), endAt: at(2030, 5, 10, 12, 5) });
+    const byTitle = Object.fromEntries(store.getState().getAgendaGridForDay("2030-05-10").items.map((i) => [i.title, i]));
+    expect(byTitle["Court"].displayMin).toBe(25);
+    expect(byTitle["Tôt"].displayMin).toBeGreaterThanOrEqual(40);
+  });
+
+  it("uses the taller display height to place a neighbour of a truncated slot side by side", async () => {
+    const store = await freshStore();
+    clearDeadlines(store);
+    store.getState().createAgendaSlot({ title: "Tôt", startAt: at(2030, 5, 10, 5), endAt: at(2030, 5, 10, 6, 5) });
+    // Starts 30 min after 06:00: clear of a 25-min minimum block, but not of a truncated one.
+    store.getState().createAgendaSlot({ title: "Après", startAt: at(2030, 5, 10, 6, 30), endAt: at(2030, 5, 10, 7) });
+    const cols = Object.fromEntries(store.getState().getAgendaGridForDay("2030-05-10").items.map((i) => [i.title, [i.col, i.cols]]));
+    expect(cols).toEqual({ Tôt: [0, 2], Après: [1, 2] });
+  });
+
+  it("keeps the real duration when it is longer than the minimum", async () => {
+    const store = await freshStore();
+    clearDeadlines(store);
+    store.getState().createAgendaSlot({ title: "Long", startAt: at(2030, 5, 10, 5), endAt: at(2030, 5, 10, 8) });
+    expect(store.getState().getAgendaGridForDay("2030-05-10").items[0].displayMin).toBe(120);
+  });
+});
+
+describe("getAgendaGridForDay 23:00 boundary", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("puts a deadline at exactly 23:00 in the bottom band, like a slot starting at 23:00", async () => {
+    const store = await freshStore();
+    clearDeadlines(store);
+    store.getState().createAgendaSlot({ title: "Nuit", startAt: at(2030, 5, 10, 23), endAt: at(2030, 5, 10, 23, 30) });
+    addQuest(store, { title: "Rendu 23h", deadlineAt: at(2030, 5, 10, 23), deadlineMode: "absolute" });
+    const g = store.getState().getAgendaGridForDay("2030-05-10", at(2030, 5, 1));
+    expect(g.items).toEqual([]);
+    expect(g.after.map((i) => i.title)).toEqual(["Nuit", "Rendu 23h"]);
+  });
+
+  it("keeps a slot created by clicking the very bottom of the grid visible in the grid, not in a band", async () => {
+    const store = await freshStore();
+    clearDeadlines(store);
+    const { start, end } = slotTimesForGridClick((GRID_END_HOUR - GRID_START_HOUR) * 60);
+    const r = store.getState().createAgendaSlot({
+      title: "Clic bas", startAt: localTimestamp("2030-05-10", start), endAt: localTimestamp("2030-05-10", end),
+    });
+    expect(r.ok).toBe(true);
+    const g = store.getState().getAgendaGridForDay("2030-05-10");
+    expect(g.items.map((i) => i.title)).toEqual(["Clic bas"]);
+    expect(g.after).toEqual([]);
   });
 });
 
