@@ -12,8 +12,9 @@ describe("slotTimesForGridClick", () => {
   it("rounds the half-way point (14:15) up to 14:30", () => {
     expect(slotTimesForGridClick(495)).toEqual({ start: "14:30", end: "15:30" });
   });
-  it("keeps the same day when the click is at the bottom of the grid", () => {
-    expect(slotTimesForGridClick(17 * 60)).toEqual({ start: "23:00", end: "23:59" });
+  it("never starts at 23:00 or later, so the new slot stays in the grid (bottom click -> 22:30)", () => {
+    expect(slotTimesForGridClick(17 * 60)).toEqual({ start: "22:30", end: "23:30" });
+    expect(slotTimesForGridClick(16 * 60 + 50)).toEqual({ start: "22:30", end: "23:30" });
   });
   it("never starts before 06:00", () => {
     expect(slotTimesForGridClick(-5)).toEqual({ start: "06:00", end: "07:00" });

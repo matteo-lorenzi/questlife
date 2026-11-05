@@ -31,8 +31,8 @@ src/
 ├── store/useStore.js                # Store Zustand unique (chapitres, quêtes, profil)
 ├── utils/constants.js               # CHAPTER_COLORS, CHAPTER_ICONS, XP_LEVELS, BADGE_DEFS, WEEKLY_OBJECTIVES
 ├── utils/graph.js                   # wouldCreateCycle(), recomputeStatuses(), getDependents()
-├── utils/agenda.js                  # Agenda pur : localDayKey, localTimestamp, validateSlotInput, normalizeAgenda, shiftLocalDays, sortSlots
-├── utils/agendaDeadlines.js         # questDeadlineItems(), mergeDayItems() (deadlines de quêtes vues comme éléments d'agenda)
+├── utils/agenda.js                  # Agenda pur : localDayKey, localTimestamp, validateSlotInput, normalizeAgenda, shiftLocalDays, sortSlots ; grille horaire : buildGridItems, assignOverlapColumns, slotTimesForGridClick, hhmm
+├── utils/agendaDeadlines.js         # questDeadlineItems(), buildGridDeadlines() (deadlines de quêtes vues comme éléments d'agenda et de la grille)
 ├── utils/panelPrefs.js              # loadPanelPrefs(), savePanelPrefs() (clé `questlife_left_panel`)
 ├── assets/icons/ChapterIcon.jsx     # SVG icons renderer
 └── components/
@@ -43,9 +43,10 @@ src/
     ├── quest/QuestSidebar.jsx       # Contenu de l'onglet « Quêtes » : drag-source (3 types) + ajout au clic
     ├── panel/LeftPanel.jsx          # Panneau gauche à onglets, réductible, préférences mémorisées
     ├── panel/tabs.js                # Registre LEFT_PANEL_TABS [{id, label, component, views}] + tabsForView(view)
-    ├── agenda/AgendaTab.jsx         # Onglet Agenda : mini-calendrier, liste du jour, formulaire de création
+    ├── agenda/AgendaTab.jsx         # Onglet Agenda : mini-calendrier, grille horaire du jour, formulaire de création
     ├── agenda/AgendaSlotRow.jsx     # Ligne de créneau : fait, modifier, supprimer, dupliquer ; ChapterSelect, ReminderField
-    ├── agenda/DeadlineRow.jsx       # Ligne de deadline de quête (lecture seule, clic = ouvre la quête)
+    ├── agenda/AgendaGrid.jsx        # Grille horaire : axe 06:00-23:00, blocs côte à côte si chevauchement, bandes hors plage, clic sur zone vide = créer, carte flottante
+    ├── agenda/AgendaDeadlineButton.jsx # Repère de deadline de quête (lecture seule, clic = ouvre la quête), partagé grille/bandes
     ├── editor/QuestPanel.jsx        # Panel éditeur droit (slide-in)
     ├── navigation/ChapterSwitcher.jsx # Dropdown navigation rapide
     ├── profile/ProfilePage.jsx      # Page compte utilisateur (pseudo, XP, badges, stats)
@@ -185,8 +186,8 @@ const {
   deleteAgendaSlot(id),
   toggleAgendaSlotDone(id),
   duplicateAgendaSlotToNextWeek(id), // même heure locale +7 j, non fait, rappels réarmés
-  getAgendaSlotsForDay(dayKey), getAgendaBusyDays(),
-  getAgendaItemsForDay(dayKey), getAgendaItemBusyDays(), // créneaux + deadlines de quêtes
+  getAgendaGridForDay(dayKey, now?), // { items, before, after } : créneaux + deadlines placés en minutes depuis 06:00 (col/cols/displayMin pour les chevauchements)
+  getAgendaItemBusyDays(),           // jours ayant un créneau ou une deadline
   openAgendaDeadline(questId),    // ouvre le chapitre et sélectionne la quête
   checkAgendaRemindersAndEmitAlerts(now), // appelé avec checkDeadlinesAndEmitAlerts toutes les 30 s (App.jsx)
 

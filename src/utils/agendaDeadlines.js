@@ -23,7 +23,7 @@ export function questDeadlineItems(quests, now = Date.now()) {
 }
 
 // Deadlines d'un jour local comme repères d'une ligne de la grille (startMin === endMin).
-// Celles hors de la plage 06:00-23:00 vont dans `before` / `after` (bandes).
+// Celles hors de la plage vont dans `before` (< 06:00) / `after` (≥ 23:00), comme les créneaux.
 export function buildGridDeadlines(deadlines, dayKey) {
   const max = (GRID_END_HOUR - GRID_START_HOUR) * 60;
   const result = { items: [], before: [], after: [] };
@@ -31,17 +31,8 @@ export function buildGridDeadlines(deadlines, dayKey) {
     const startMin = minutesSinceGridStart(d.at);
     const item = { ...d, startMin, endMin: startMin };
     if (startMin < 0) result.before.push(item);
-    else if (startMin > max) result.after.push(item);
+    else if (startMin >= max) result.after.push(item);
     else result.items.push(item);
   }
   return result;
-}
-
-// Éléments d'un jour (créneaux + deadlines) triés par heure.
-export function mergeDayItems(slots, deadlines, dayKey) {
-  const slotItems = slots
-    .filter((s) => localDayKey(s.startAt) === dayKey)
-    .map((s) => ({ ...s, kind: "slot", at: s.startAt }));
-  const dlItems = deadlines.filter((d) => localDayKey(d.at) === dayKey);
-  return [...slotItems, ...dlItems].sort((a, b) => a.at - b.at);
 }

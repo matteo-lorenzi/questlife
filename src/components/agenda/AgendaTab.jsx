@@ -9,7 +9,7 @@ const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 const MONTH_FMT = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' })
 const DAY_FMT = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
 
-// Onglet Agenda : mini-calendrier du mois, liste du jour, formulaire de création.
+// Onglet Agenda : mini-calendrier du mois, grille horaire du jour (clic pour créer), formulaire de création.
 export default function AgendaTab() {
   const slots = useStore(s => s.agenda.slots)
   const createAgendaSlot = useStore(s => s.createAgendaSlot)
