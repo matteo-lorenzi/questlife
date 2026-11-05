@@ -15,6 +15,7 @@ import {
   validateSlotInput,
   normalizeAgenda,
   shiftLocalSlot,
+  buildGridItems,
 } from "../utils/agenda";
 import { normalizeReminderOffsetsMs, formatReminderLeadTime } from "../utils/reminders";
 import { questDeadlineItems, mergeDayItems } from "../utils/agendaDeadlines";
@@ -409,6 +410,11 @@ export const useStore = create((set, get) => ({
   getAgendaItemsForDay(dayKey, now = Date.now()) {
     const { agenda, quests } = get();
     return mergeDayItems(agenda.slots, questDeadlineItems(quests, now), dayKey);
+  },
+
+  // Grille horaire d'un jour local : créneaux en minutes depuis 06:00 (aucun pixel).
+  getAgendaGridForDay(dayKey, now = Date.now()) { // eslint-disable-line no-unused-vars
+    return { items: buildGridItems(get().agenda.slots, dayKey) };
   },
 
   // Jours locaux ayant au moins un créneau ou une deadline.
