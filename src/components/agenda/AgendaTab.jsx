@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useStore } from '../../store/useStore'
 import { localDayKey, localTimestamp } from '../../utils/agenda'
+import DeadlineRow from './DeadlineRow'
 
 const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 const MONTH_FMT = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' })
@@ -11,8 +12,10 @@ const DAY_FMT = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeri
 export default function AgendaTab() {
   const agenda = useStore(s => s.agenda)
   const createAgendaSlot = useStore(s => s.createAgendaSlot)
-  const getAgendaSlotsForDay = useStore(s => s.getAgendaSlotsForDay)
-  const getAgendaBusyDays = useStore(s => s.getAgendaBusyDays)
+  const getAgendaItemsForDay = useStore(s => s.getAgendaItemsForDay)
+  const getAgendaItemBusyDays = useStore(s => s.getAgendaItemBusyDays)
+  const openAgendaDeadline = useStore(s => s.openAgendaDeadline)
+  const quests = useStore(s => s.quests) // re-render quand une deadline change
 
   const todayKey = localDayKey()
   const [selected, setSelected] = useState(todayKey)
@@ -29,8 +32,8 @@ export default function AgendaTab() {
   const [error, setError] = useState('')
 
   // `agenda` est lu pour re-render quand les créneaux changent.
-  const busy = new Set(agenda ? getAgendaBusyDays() : [])
-  const slots = getAgendaSlotsForDay(selected)
+  const busy = new Set(agenda && quests ? getAgendaItemBusyDays() : [])
+  const items = getAgendaItemsForDay(selected)
 
   const first = new Date(cursor.year, cursor.month, 1)
   const offset = (first.getDay() + 6) % 7 // lundi en premier
@@ -156,11 +159,13 @@ export default function AgendaTab() {
           </form>
         )}
 
-        {slots.length === 0 ? (
+        {items.length === 0 ? (
           <p className="text-xs text-gray-400">Aucun créneau ce jour.</p>
         ) : (
           <ul className="space-y-1">
-            {slots.map(s => (
+            {items.map(s => s.kind === 'deadline' ? (
+              <DeadlineRow key={s.id} item={s} onOpen={openAgendaDeadline} />
+            ) : (
               <li key={s.id} className="px-2 py-1.5 rounded-lg border border-gray-100 dark:border-zinc-800">
                 <p className="text-xs font-medium truncate">{s.title}</p>
                 <p className="text-xs text-gray-400">

@@ -16,6 +16,7 @@ import {
   normalizeAgenda,
   sortSlots,
 } from "../utils/agenda";
+import { questDeadlineItems, mergeDayItems } from "../utils/agendaDeadlines";
 
 // ── LocalStorage persistence helper ──────────────────────────────────────────
 const LS_KEY = "questlife_data";
@@ -326,6 +327,31 @@ export const useStore = create((set, get) => ({
   // Clés des jours locaux contenant au moins un créneau.
   getAgendaBusyDays() {
     return [...new Set(get().agenda.slots.map((s) => localDayKey(s.startAt)))];
+  },
+
+  // Créneaux + deadlines de quêtes d'un jour local, triés par heure.
+  getAgendaItemsForDay(dayKey, now = Date.now()) {
+    const { agenda, quests } = get();
+    return mergeDayItems(agenda.slots, questDeadlineItems(quests, now), dayKey);
+  },
+
+  // Jours locaux ayant au moins un créneau ou une deadline.
+  getAgendaItemBusyDays() {
+    const { agenda, quests } = get();
+    return [
+      ...new Set([
+        ...agenda.slots.map((s) => localDayKey(s.startAt)),
+        ...questDeadlineItems(quests).map((d) => localDayKey(d.at)),
+      ]),
+    ];
+  },
+
+  // Clic sur une deadline : ouvre le chapitre de la quête et la sélectionne.
+  openAgendaDeadline(questId) {
+    const quest = get().quests.find((q) => q.id === questId);
+    if (!quest) return;
+    get().setActiveChapter(quest.chapterId);
+    get().selectQuest(questId);
   },
 
   // ── Chapters ───────────────────────────────────────────────────────────────
