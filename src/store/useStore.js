@@ -299,7 +299,7 @@ export const useStore = create((set, get) => ({
 
   // ── Agenda (créneaux de révision, jours en heure locale) ───────────────────
   // Retourne { ok: true, slot } ou { ok: false, error }.
-  createAgendaSlot({ title, startAt, endAt }) {
+  createAgendaSlot({ title, startAt, endAt, chapterId = null }) {
     const error = validateSlotInput({ title, startAt, endAt });
     if (error) return { ok: false, error };
     const slot = {
@@ -307,7 +307,7 @@ export const useStore = create((set, get) => ({
       title: title.trim(),
       startAt,
       endAt,
-      chapterId: null,
+      chapterId: get().chapters.some((c) => c.id === chapterId) ? chapterId : null,
       done: false,
       reminderOffsetsMs: [],
       sentReminderOffsetsMs: [],
@@ -316,6 +316,43 @@ export const useStore = create((set, get) => ({
     set((s) => ({ agenda: { ...s.agenda, slots: [...s.agenda.slots, slot] } }));
     get()._persist();
     return { ok: true, slot };
+  },
+
+  // Modifie un créneau (mêmes règles de validation qu'à la création).
+  // patch : { title?, startAt?, endAt?, chapterId? }. Retourne { ok, slot } ou { ok: false, error }.
+  updateAgendaSlot(id, patch = {}) {
+    const current = get().agenda.slots.find((s) => s.id === id);
+    if (!current) return { ok: false, error: "Créneau introuvable." };
+    const next = {
+      title: patch.title ?? current.title,
+      startAt: patch.startAt ?? current.startAt,
+      endAt: patch.endAt ?? current.endAt,
+    };
+    const error = validateSlotInput(next);
+    if (error) return { ok: false, error };
+    const chapterId = "chapterId" in patch ? patch.chapterId : current.chapterId;
+    const slot = {
+      ...current,
+      ...next,
+      title: next.title.trim(),
+      chapterId: get().chapters.some((c) => c.id === chapterId) ? chapterId : null,
+    };
+    set((s) => ({ agenda: { ...s.agenda, slots: s.agenda.slots.map((x) => (x.id === id ? slot : x)) } }));
+    get()._persist();
+    return { ok: true, slot };
+  },
+
+  deleteAgendaSlot(id) {
+    set((s) => ({ agenda: { ...s.agenda, slots: s.agenda.slots.filter((x) => x.id !== id) } }));
+    get()._persist();
+  },
+
+  // Coche/décoche « fait ». Sans effet sur l'XP, la série, les objectifs ni les badges.
+  toggleAgendaSlotDone(id) {
+    set((s) => ({
+      agenda: { ...s.agenda, slots: s.agenda.slots.map((x) => (x.id === id ? { ...x, done: !x.done } : x)) },
+    }));
+    get()._persist();
   },
 
   // Créneaux d'un jour local "YYYY-MM-DD", triés par heure de début.
@@ -423,6 +460,10 @@ export const useStore = create((set, get) => ({
     set((s) => ({
       chapters: s.chapters.filter((c) => c.id !== id),
       quests: s.quests.filter((q) => q.chapterId !== id),
+      agenda: {
+        ...s.agenda,
+        slots: s.agenda.slots.map((x) => (x.chapterId === id ? { ...x, chapterId: null } : x)),
+      },
       activeChapterId: s.activeChapterId === id ? null : s.activeChapterId,
     }));
     get()._persist();
