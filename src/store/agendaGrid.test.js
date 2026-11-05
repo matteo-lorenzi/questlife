@@ -37,6 +37,25 @@ describe("getAgendaGridForDay", () => {
     expect(store.getState().getAgendaGridForDay("2026-11-07").items).toEqual([]);
   });
 
+  it("reflects done, edit, delete and duplicate immediately", async () => {
+    const store = await freshStore();
+    const { slot } = store.getState().createAgendaSlot({ title: "Maths", startAt: at(2026, 11, 5, 9), endAt: at(2026, 11, 5, 10) });
+    const grid = (day) => store.getState().getAgendaGridForDay(day).items;
+
+    store.getState().toggleAgendaSlotDone(slot.id);
+    expect(grid("2026-11-05")[0]).toMatchObject({ id: slot.id, done: true });
+
+    store.getState().updateAgendaSlot(slot.id, { title: "Physique", startAt: at(2026, 11, 5, 14), endAt: at(2026, 11, 5, 15, 30) });
+    expect(grid("2026-11-05")[0]).toMatchObject({ title: "Physique", startMin: 480, endMin: 570 });
+
+    const dup = store.getState().duplicateAgendaSlotToNextWeek(slot.id);
+    expect(grid("2026-11-12").map((i) => i.id)).toEqual([dup.slot.id]);
+
+    store.getState().deleteAgendaSlot(slot.id);
+    expect(grid("2026-11-05")).toEqual([]);
+    expect(grid("2026-11-12")).toHaveLength(1);
+  });
+
   it("keeps local wall-clock minutes on a daylight-saving change day", async () => {
     const store = await freshStore();
     store.getState().createAgendaSlot({ title: "DST", startAt: at(2026, 3, 29, 9), endAt: at(2026, 3, 29, 10, 15) });

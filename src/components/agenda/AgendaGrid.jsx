@@ -1,4 +1,6 @@
-import React, { useEffect, useMemo, useRef } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import AgendaSlotRow from './AgendaSlotRow'
 import { useStore } from '../../store/useStore'
 import { GRID_START_HOUR, GRID_END_HOUR, minutesSinceGridStart } from '../../utils/agenda'
 
@@ -18,8 +20,14 @@ export default function AgendaGrid({ dayKey, todayKey, now }) {
   const openAgendaDeadline = useStore(s => s.openAgendaDeadline)
   const chapters = useStore(s => s.chapters)
   const scrollRef = useRef(null)
+  const [open, setOpen] = useState(null) // { id, rect } du bloc cliqué
+  const openSlot = open ? slots.find(s => s.id === open.id) : null
 
   const grid = useMemo(() => getAgendaGridForDay(dayKey, now), [getAgendaGridForDay, dayKey, now, slots, quests])
+  // Créneau supprimé ou déplacé hors du jour : la carte se ferme.
+  useEffect(() => {
+    if (open && !grid.items.some(i => i.id === open.id)) setOpen(null)
+  }, [open, grid])
   const isToday = dayKey === todayKey
   const nowMin = minutesSinceGridStart(now)
   const showNow = isToday && nowMin >= 0 && nowMin <= (GRID_END_HOUR - GRID_START_HOUR) * 60
@@ -73,11 +81,12 @@ export default function AgendaGrid({ dayKey, todayKey, now }) {
             const height = Math.max(MIN_BLOCK_PX, (item.endMin - item.startMin) * PX_PER_MIN)
             const accent = chapter?.color?.accent || '#a855f7'
             return (
-              <div key={item.id} title={item.title}
-                className="absolute left-0 right-0 overflow-hidden rounded-md px-1.5 py-0.5 text-[11px] leading-tight text-gray-800 dark:text-gray-100 bg-purple-100/80 dark:bg-zinc-800"
+              <button key={item.id} type="button" title={item.title} data-slot-id={item.id}
+                onClick={e => setOpen({ id: item.id, rect: e.currentTarget.getBoundingClientRect() })}
+                className="absolute left-0 right-0 overflow-hidden rounded-md px-1.5 py-0.5 text-left text-[11px] leading-tight text-gray-800 dark:text-gray-100 bg-purple-100/80 dark:bg-zinc-800 cursor-pointer"
                 style={{ top: item.startMin * PX_PER_MIN, height, borderLeft: `3px solid ${accent}`, backgroundColor: `${accent}26` }}>
                 <span className={`font-medium ${item.done ? 'line-through opacity-60' : ''}`}>{item.title}</span>
-              </div>
+              </button>
             )
           })}
         </div>
@@ -89,6 +98,65 @@ export default function AgendaGrid({ dayKey, todayKey, now }) {
           </div>
         )}
       </div>
+      {openSlot && (
+        <SlotPopover slot={openSlot} rect={open.rect} scrollRef={scrollRef} onClose={() => setOpen(null)} />
+      )}
     </div>
+  )
+}
+
+const POP_W = 240
+const POP_MAX_H = 320
+
+// Carte du créneau en surimpression, ancrée au bloc cliqué (position fixe : pas rognée par le défilement).
+function SlotPopover({ slot, rect, scrollRef, onClose }) {
+  const popRef = useRef(null)
+  const [anchor, setAnchor] = useState(rect)
+  const slotId = slot.id
+
+  useEffect(() => { setAnchor(rect) }, [rect])
+
+  useEffect(() => {
+    const onKey = e => { if (e.key === 'Escape') onClose() }
+    const onDown = e => {
+      if (popRef.current?.contains(e.target)) return
+      if (e.target.closest?.('[data-slot-id]')) return // un autre bloc rouvre sa propre carte
+      onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    document.addEventListener('mousedown', onDown)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.removeEventListener('mousedown', onDown)
+    }
+  }, [onClose])
+
+  // Suit le bloc quand la grille défile.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return undefined
+    const follow = () => {
+      const b = el.querySelector(`[data-slot-id="${slotId}"]`)
+      if (b) setAnchor(b.getBoundingClientRect())
+    }
+    el.addEventListener('scroll', follow)
+    return () => el.removeEventListener('scroll', follow)
+  }, [scrollRef, slotId])
+
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  const left = Math.max(4, Math.min(anchor.left, vw - POP_W - 4))
+  const below = anchor.bottom + 4
+  const fitsBelow = below + Math.min(POP_MAX_H, 200) <= vh
+  const style = fitsBelow
+    ? { top: below, left, width: POP_W, maxHeight: Math.min(POP_MAX_H, vh - below - 4) }
+    : { bottom: vh - anchor.top + 4, left, width: POP_W, maxHeight: Math.min(POP_MAX_H, anchor.top - 8) }
+
+  return createPortal(
+    <div ref={popRef} role="dialog" aria-label="Créneau" style={style}
+      className="fixed z-50 overflow-y-auto rounded-lg shadow-lg border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-gray-700 dark:text-gray-200">
+      <ul><AgendaSlotRow slot={slot} /></ul>
+    </div>,
+    document.body,
   )
 }
