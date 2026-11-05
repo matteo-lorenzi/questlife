@@ -55,6 +55,15 @@ export function getRemainingMs(t, now) {
   }
 }
 
+// Durée lisible sans arrondi trompeur : « 25 min », « 1 h », « 1 h 30 ».
+export function formatFocusDuration(ms) {
+  const totalMinutes = Math.round(ms / MINUTE_MS)
+  const h = Math.floor(totalMinutes / 60)
+  const m = totalMinutes % 60
+  if (h === 0) return `${m} min`
+  return m === 0 ? `${h} h` : `${h} h ${m}`
+}
+
 export function formatClock(ms) {
   const totalSeconds = ms > 0 ? Math.ceil(ms / 1000) : 0
   const h = Math.floor(totalSeconds / 3600)

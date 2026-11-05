@@ -10,6 +10,7 @@ import {
   isFinished,
   getRemainingMs,
   formatClock,
+  formatFocusDuration,
 } from "./focusTimer";
 
 const MIN = 60000;
@@ -90,6 +91,21 @@ describe("timer transitions", () => {
     expect(reset.status).toBe("idle");
     expect(reset.durationMs).toBe(45 * MIN);
     expect(getRemainingMs(reset, 0)).toBe(45 * MIN);
+  });
+});
+
+describe("formatFocusDuration", () => {
+  it.each([
+    [MIN, "1 min"],
+    [25 * MIN, "25 min"],
+    [59 * MIN, "59 min"],
+    [HOUR, "1 h"],
+    [90 * MIN, "1 h 30"],
+    [100 * MIN, "1 h 40"],
+    [150 * MIN, "2 h 30"],
+    [180 * MIN, "3 h"],
+  ])("formats %s ms as %s", (ms, expected) => {
+    expect(formatFocusDuration(ms)).toBe(expected);
   });
 });
 

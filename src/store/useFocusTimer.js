@@ -8,10 +8,10 @@ import {
   resetTimer,
   finishTimer,
   isFinished,
+  formatFocusDuration,
   normalizeFocusMinutes,
 } from '../utils/focusTimer'
 import { loadFocusMinutes, saveFocusMinutes } from '../utils/focusPrefs'
-import { formatReminderLeadTime } from '../utils/reminders'
 
 // Store dédié au minuteur : état en mémoire uniquement (fermer l'app l'abandonne),
 // seule la durée choisie est mémorisée (voir focusPrefs).
@@ -62,7 +62,7 @@ export const useFocusTimer = create((set, get) => ({
       emitToast('Focus terminé')
       emitSystemNotification(
         'QuestLife - focus terminé',
-        `Focus de ${formatReminderLeadTime(timer.durationMs)} terminé.`,
+        `Focus de ${formatFocusDuration(timer.durationMs)} terminé.`,
       )
       return
     }

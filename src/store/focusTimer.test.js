@@ -108,6 +108,14 @@ describe("focus timer store", () => {
     ]);
   });
 
+  it("announces a non-whole-hour duration exactly in the notification", async () => {
+    const { store } = await freshStore();
+    store.getState().setDurationMinutes(90);
+    store.getState().start(0);
+    store.getState().tick(90 * MIN);
+    expect(spy.notifications[0].body).toBe("Focus de 1 h 30 terminé.");
+  });
+
   it("notifies once and stays at zero after a long sleep and repeated ticks", async () => {
     const { store, getRemainingMs } = await freshStore();
     store.getState().start(0);
