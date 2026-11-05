@@ -3,6 +3,7 @@ import { useStore } from '../../store/useStore'
 import ChapterCard from '../chapters/ChapterCard'
 import { Btn, ProgressBar } from '../ui'
 import LeftPanel from '../panel/LeftPanel'
+import FocusPill from '../focus/FocusPill'
 import { tabsForView } from '../panel/tabs'
 import { getLevelFromXP, getNextLevel } from '../../utils/constants'
 
@@ -28,6 +29,8 @@ export default function HomePage() {
           </div>
           <span className="text-sm font-medium text-gray-900 dark:text-gray-100">QuestLife</span>
         </div>
+
+        <FocusPill />
 
         {/* XP profile */}
         <div className="flex items-center gap-3">

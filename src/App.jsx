@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import toast, { Toaster } from 'react-hot-toast'
 import { useStore } from './store/useStore'
+import { useFocusTimer } from './store/useFocusTimer'
 import HomePage from './components/layout/HomePage'
 import CanvasView from './components/layout/CanvasView'
 import ChapterHeader from './components/layout/ChapterHeader'
@@ -45,6 +46,16 @@ export default function App() {
       return false
     }
   }
+
+  // Pilote du minuteur de focus : une seconde, actif seulement pendant un focus.
+  const focusStatus = useFocusTimer(s => s.timer.status)
+  useEffect(() => {
+    if (focusStatus !== 'running') return undefined
+    const tick = () => useFocusTimer.getState().tick(Date.now())
+    tick()
+    const id = globalThis.setInterval(tick, 1000)
+    return () => globalThis.clearInterval(id)
+  }, [focusStatus])
 
   useEffect(() => {
     let celebrationTimer = null

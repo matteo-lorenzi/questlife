@@ -39,5 +39,19 @@ La colonne latérale persistante de l'application, partagée entre l'accueil et 
 _Avoid_: Sidebar, menu latéral
 
 **Onglet**:
-Un outil affiché dans le panneau gauche : « Agenda » (accueil et vue chapitre) et « Quêtes » (vue chapitre, ajout de quêtes au clic ou par glisser-déposer). Minuteur et to-do plus tard.
+Un outil affiché dans le panneau gauche : « Agenda » (accueil et vue chapitre), « Quêtes » (vue chapitre, ajout de quêtes au clic ou par glisser-déposer) et « Minuteur ». To-do plus tard.
 _Avoid_: Widget, module, section
+
+## Minuteur
+
+**Minuteur**:
+L'outil de l'onglet « Minuteur » : un compte à rebours qui mesure une période de **Focus**, sans phase de pause ni cycle. Autonome : il n'est lié à aucun chapitre, quête ou créneau de révision, n'enregistre rien et n'a aucun effet sur l'XP, la série, les objectifs hebdomadaires ni les badges. Il continue de tourner quand l'utilisateur change d'onglet, réduit le panneau ou passe de l'accueil à un chapitre ; fermer l'application l'abandonne. Il se règle (durée du **Focus**, 1 h par défaut) puis se démarre, se met en pause et se reprend, ou se réinitialise. À la fin, il émet une notification (toast et notification desktop) et affiche « Focus terminé » jusqu'à ce que l'utilisateur le relance ou le ferme. Tant qu'il n'est pas au repos, la **Pastille du minuteur** le rappelle dans l'en-tête.
+_Avoid_: Timer, pomodoro, chrono
+
+**Pastille du minuteur**:
+Le petit indicateur discret de l'en-tête (accueil et vue chapitre) qui affiche le temps restant du **Minuteur** (ou « Terminé ») tant qu'il n'est pas au repos. Un clic ouvre l'onglet « Minuteur » et déploie le **Panneau gauche** s'il est réduit. Le minuteur n'a aucun autre lien avec l'**Agenda** : il ne marque aucun créneau et ne filtre aucun **Rappel**.
+_Avoid_: Badge (déjà pris par les badges de gamification), widget
+
+**Focus**:
+La période de concentration d'une durée choisie que mesure le **Minuteur**.
+_Avoid_: Session, séance (réservés au vocabulaire à éviter pour le **Créneau de révision**)

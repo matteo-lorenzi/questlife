@@ -4,6 +4,7 @@ import { ProgressBar, Btn, Modal } from '../ui'
 import { getChapterProgress } from '../../utils/graph'
 import { QUEST_STATUS, CANVAS_BACKGROUNDS, getChapterBg } from '../../utils/constants'
 import ChapterSwitcher from '../navigation/ChapterSwitcher'
+import FocusPill from '../focus/FocusPill'
 
 export default function ChapterHeader({ chapter }) {
   const { quests, setActiveChapter, openChapterModal, updateChapter, theme } = useStore()
@@ -58,6 +59,7 @@ export default function ChapterHeader({ chapter }) {
           <span className="text-xs font-medium hidden md:block" style={{ color: chapter.color.accent }}>{prog.done}/{prog.total}</span>
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
+          <FocusPill />
           <Btn size="sm" variant="default" onClick={() => setShowBackgroundBank(true)}>
             Fond: {selectedBackground.label}
           </Btn>
