@@ -4,3 +4,4 @@ dist
 *.local
 *release*
 release
+.claude/settings.local.json
