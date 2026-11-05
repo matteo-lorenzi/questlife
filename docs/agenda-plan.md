@@ -20,17 +20,19 @@ Résultat de la session de cadrage du 2026-11-05. Les termes (Agenda, Créneau d
 
 ## Tickets
 
-Ordre : 0 → 1 → 2 → 3 → 4 → 5 → 6. Le ticket 3 est indépendant des tickets 1 et 2. Le ticket 4 a besoin des tickets 2 et 3.
+Découpage réel, suivi dans GitHub Issues (spec : #1). Tous livrés, dans l'ordre : #2 → #3 → #4 → #5 → #6 → #7 → #8 → #9. Le découpage initial (tickets 0 à 6) a été remanié en tranches verticales : la logique pure, l'état et l'interface d'un même comportement sont livrés ensemble plutôt que par couche.
 
-| # | Ticket | Contenu |
+| Issue | Ticket | Livré |
 |---|---|---|
-| 0 | Installer Vitest | `vitest` + `jsdom` (le store lit `localStorage` à l'import), script `npm test`, un test de fumée sur `wouldCreateCycle` de `src/utils/graph.js`. Pas de React Testing Library. |
-| 1 | Logique pure de l'agenda | `src/utils/agenda.js` : clés de jour locales, validation d'un créneau, tri, copie « semaine suivante » (même heure locale, +7 jours), calcul des rappels dus. Tests pour tout. |
-| 2 | État et persistance | Champ `agenda` dans le store et `saveState`, normalisation au chargement, actions créer / modifier / supprimer / cocher / dupliquer, nettoyage du lien à la suppression d'un chapitre. Tests du store. |
-| 3 | Conteneur du panneau gauche | Composant à onglets avec registre, monté sur l'accueil et dans la vue chapitre, `QuestSidebar` devient l'onglet « Quêtes », mémorisation de l'onglet et de l'état réduit. |
-| 4 | Onglet Agenda | Mini-calendrier du mois, liste du jour, formulaire en ligne, deadlines de quêtes en lecture seule avec clic vers la quête. |
-| 5 | Rappels de créneaux | Branchement sur la boucle de 30 s et le circuit de notifications existants, avec suivi des rappels déjà envoyés. |
-| 6 | Documentation | `README.md` (structure), `.github/copilot-instructions.md` (modèle de données), `GLOSSARY.md` à jour. |
+| #1 | Spec « Agenda intégré » | Ticket parent : décisions ci-dessus. |
+| #2 | Installer Vitest et un test de fumée | `vitest` + `jsdom`, script `npm test` (`vitest run`), fuseau `Europe/Paris` fixé dans `vite.config.js`, test de fumée sur `wouldCreateCycle` (`src/utils/graph.test.js`). Pas de React Testing Library. |
+| #3 | Panneau gauche à onglets dans la vue chapitre | `src/components/panel/LeftPanel.jsx` + registre `tabs.js` (`{id, label, component, views}`). `QuestSidebar` devient l'onglet « Quêtes », comportement inchangé. Bouton réduire/déployer, préférences dans `src/utils/panelPrefs.js` (clé `questlife_left_panel`, hors `questlife_data`). |
+| #4 | Planifier un créneau de révision (onglet Agenda) | `src/utils/agenda.js` (jours locaux, `validateSlotInput`, `normalizeAgenda`, tri), champ `agenda` du store + persistance + `createAgendaSlot`, onglet Agenda (mini-calendrier, liste du jour, formulaire en ligne), panneau monté aussi sur l'accueil avec Agenda par défaut. Tests du store. |
+| #5 | Gérer un créneau : modifier, supprimer, fait, chapitre | `updateAgendaSlot`, `deleteAgendaSlot`, `toggleAgendaSlotDone`, sélecteur de chapitre, nettoyage du lien à la suppression d'un chapitre (`AgendaSlotRow.jsx`). |
+| #6 | Dupliquer un créneau à la semaine suivante | `duplicateAgendaSlotToNextWeek` + `shiftLocalDays` (même heure locale, +7 jours, résiste au changement d'heure ; copie non faite, rappels réarmés). |
+| #7 | Afficher les deadlines de quêtes dans l'agenda | `src/utils/agendaDeadlines.js` (`questDeadlineItems`, `mergeDayItems`), `getAgendaItemsForDay` / `getAgendaItemBusyDays`, `DeadlineRow.jsx` en lecture seule (expirées et validées marquées), `openAgendaDeadline` ouvre le chapitre et sélectionne la quête. |
+| #8 | Rappels de créneaux | Champs `reminderOffsetsMs` / `sentReminderOffsetsMs` sur le créneau, saisie en minutes dans le formulaire, `checkAgendaRemindersAndEmitAlerts` branché sur la boucle de 30 s de `App.jsx` et le circuit toast + notification desktop. |
+| #9 | Documentation de l'agenda | `README.md`, `.github/copilot-instructions.md`, `GLOSSARY.md`, ce plan. |
 
 ## Points d'attention pour l'implémentation
 
