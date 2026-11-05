@@ -11,6 +11,13 @@ const path = require("node:path");
 
 const isDev = !app.isPackaged;
 
+// Profils de développement (npm run electron:demo / electron:empty) : chaque profil
+// a son propre dossier de données, donc son propre localStorage, isolé du profil réel.
+const devProfile = process.env.QUESTLIFE_PROFILE;
+if (isDev && devProfile && /^[a-z0-9_-]+$/i.test(devProfile)) {
+  app.setPath("userData", path.join(app.getPath("appData"), `QuestLife-${devProfile}`));
+}
+
 app.setAppUserModelId("com.questlife.desktop");
 
 function readUpdateConfig() {
