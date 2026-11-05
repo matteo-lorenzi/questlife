@@ -1,8 +1,9 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useStore } from '../../store/useStore'
 import { localDayKey, localTimestamp } from '../../utils/agenda'
 
-const TIME_FMT = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' })
+const DATE_FMT = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
+// HH:MM zéro-complété, local : sert à l'affichage et aux <input type="time">.
 const hhmm = ts => {
   const d = new Date(ts)
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
@@ -56,6 +57,20 @@ export default function AgendaSlotRow({ slot }) {
   const [chapterId, setChapterId] = useState(slot.chapterId)
   const [reminders, setReminders] = useState(reminderMinutesText(slot.reminderOffsetsMs))
   const [error, setError] = useState('')
+  const [dupFeedback, setDupFeedback] = useState(null) // { ok, text }
+
+  useEffect(() => {
+    if (!dupFeedback) return undefined
+    const t = setTimeout(() => setDupFeedback(null), 3000)
+    return () => clearTimeout(t)
+  }, [dupFeedback])
+
+  function duplicate() {
+    const res = duplicateAgendaSlotToNextWeek(slot.id)
+    setDupFeedback(res.ok
+      ? { ok: true, text: `Copié au ${DATE_FMT.format(res.slot.startAt)} à ${hhmm(res.slot.startAt)}` }
+      : { ok: false, text: res.error })
+  }
 
   function openEdit() {
     setTitle(slot.title)
@@ -115,7 +130,7 @@ export default function AgendaSlotRow({ slot }) {
         aria-label="Fait" className="mt-0.5 accent-purple-500" />
       <div className="min-w-0 flex-1">
         <p className={`text-xs font-medium truncate ${slot.done ? 'line-through text-gray-400' : ''}`}>{slot.title}</p>
-        <p className="text-xs text-gray-400">{TIME_FMT.format(slot.startAt)} – {TIME_FMT.format(slot.endAt)}</p>
+        <p className="text-xs text-gray-400">{hhmm(slot.startAt)} – {hhmm(slot.endAt)}</p>
         {slot.reminderOffsetsMs?.length > 0 && (
           <p className="text-[10px] text-gray-400">Rappels : {reminderMinutesText(slot.reminderOffsetsMs)} min avant</p>
         )}
@@ -125,8 +140,14 @@ export default function AgendaSlotRow({ slot }) {
             {chapter.title}
           </span>
         )}
-        <button type="button" onClick={() => duplicateAgendaSlotToNextWeek(slot.id)}
+        <button type="button" onClick={duplicate}
           className="mt-1 text-[11px] text-purple-500 hover:underline">Dupliquer à la semaine suivante</button>
+        {dupFeedback && (
+          <p role={dupFeedback.ok ? 'status' : 'alert'}
+            className={`text-[10px] ${dupFeedback.ok ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
+            {dupFeedback.text}
+          </p>
+        )}
       </div>
       <button type="button" onClick={openEdit} aria-label="Modifier"
         className="text-xs text-gray-400 hover:text-purple-500">✎</button>

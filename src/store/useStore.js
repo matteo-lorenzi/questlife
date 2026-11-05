@@ -14,9 +14,9 @@ import {
   localDayKey,
   validateSlotInput,
   normalizeAgenda,
-  sortSlots,
-  shiftLocalDays,
+  shiftLocalSlot,
 } from "../utils/agenda";
+import { normalizeReminderOffsetsMs, formatReminderLeadTime } from "../utils/reminders";
 import { questDeadlineItems, mergeDayItems } from "../utils/agendaDeadlines";
 
 // ── LocalStorage persistence helper ──────────────────────────────────────────
@@ -60,15 +60,6 @@ function emitSystemNotification(title, body) {
   );
 }
 
-function normalizeReminderOffsetsMs(offsets) {
-  if (!Array.isArray(offsets)) return [];
-  const clean = offsets
-    .map((v) => Number.parseInt(v, 10))
-    .filter((v) => Number.isFinite(v) && v > 0)
-    .map((v) => Math.max(60000, v));
-  return [...new Set(clean)].sort((a, b) => b - a).slice(0, 8);
-}
-
 function normalizeChecklistItems(items) {
   if (!Array.isArray(items)) return [];
   return items
@@ -79,15 +70,6 @@ function normalizeChecklistItems(items) {
     }))
     .filter((item) => item.label.length > 0)
     .slice(0, 30);
-}
-
-function formatReminderLeadTime(offsetMs) {
-  const minutes = Math.round(offsetMs / 60000);
-  if (minutes >= 43200) return `${Math.round(minutes / 43200)} mois`;
-  if (minutes >= 10080) return `${Math.round(minutes / 10080)} sem`;
-  if (minutes >= 1440) return `${Math.round(minutes / 1440)} j`;
-  if (minutes >= 60) return `${Math.round(minutes / 60)} h`;
-  return `${minutes} min`;
 }
 
 function getInitialTheme() {
@@ -325,11 +307,14 @@ export const useStore = create((set, get) => ({
   duplicateAgendaSlotToNextWeek(id) {
     const src = get().agenda.slots.find((s) => s.id === id);
     if (!src) return { ok: false, error: "Créneau introuvable." };
+    const { startAt, endAt } = shiftLocalSlot(src.startAt, src.endAt, 7);
+    const error = validateSlotInput({ title: src.title, startAt, endAt });
+    if (error) return { ok: false, error };
     const slot = {
       ...src,
       id: nanoid(),
-      startAt: shiftLocalDays(src.startAt, 7),
-      endAt: shiftLocalDays(src.endAt, 7),
+      startAt,
+      endAt,
       done: false,
       reminderOffsetsMs: [...src.reminderOffsetsMs],
       sentReminderOffsetsMs: [],
@@ -418,16 +403,6 @@ export const useStore = create((set, get) => ({
       agenda: { ...s.agenda, slots: s.agenda.slots.map((x) => (x.id === id ? { ...x, done: !x.done } : x)) },
     }));
     get()._persist();
-  },
-
-  // Créneaux d'un jour local "YYYY-MM-DD", triés par heure de début.
-  getAgendaSlotsForDay(dayKey) {
-    return sortSlots(get().agenda.slots.filter((s) => localDayKey(s.startAt) === dayKey));
-  },
-
-  // Clés des jours locaux contenant au moins un créneau.
-  getAgendaBusyDays() {
-    return [...new Set(get().agenda.slots.map((s) => localDayKey(s.startAt)))];
   },
 
   // Créneaux + deadlines de quêtes d'un jour local, triés par heure.
