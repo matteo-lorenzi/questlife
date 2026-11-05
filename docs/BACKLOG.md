@@ -62,3 +62,22 @@ Date de rédaction : 2026-11-05 (session de cadrage de la feature « Agenda int�
 ## 4. Limite connue : rappels uniquement application ouverte
 
 Les rappels de créneaux utilisent le circuit de notifications desktop existant, vérifié toutes les 30 s dans l'application. Ils ne se déclenchent donc **que si QuestLife est ouvert**, comme les alarmes de deadline des quêtes. Pour des rappels application fermée, il faudrait un service en arrière-plan côté Electron (planificateur dans le processus principal ou tâche système) ; c'est hors périmètre de la feature Agenda.
+
+---
+
+## 5. XP, historique et stats du minuteur de focus
+
+**Idée.** Récompenser les focus terminés : XP, historique (focus du jour, durée cumulée), série, objectif hebdomadaire « X h de focus », badges, rattachement d'un focus à un chapitre, une quête ou un créneau de révision.
+
+**Pourquoi pas maintenant.** Mêmes raisons que l'XP de l'agenda (§2) :
+- Le système d'XP est bâti sur les quêtes (`xpHistory` identifié par `questId`) ; un focus n'a pas d'identifiant équivalent.
+- Règle de gain et règle anti-abus à trancher d'abord : lancer un minuteur sans travailler ne doit pas rapporter d'XP (durée minimale, plafond par jour, focus interrompu non compté…).
+- Un historique impose de persister les focus dans `questlife_data` et de définir ce qu'est un focus « terminé » (pause, reset, fermeture de l'app).
+- Le lien avec un chapitre, une quête ou un créneau élargit les modèles de ces entités.
+
+**Ce qui est fait à la place (v1).** Minuteur autonome : un focus terminé ne laisse aucune trace et n'a aucun effet sur l'XP, la série, les objectifs hebdomadaires ni les badges.
+
+**Pour reprendre.**
+- Signal pour s'y remettre : tu veux voir combien de temps tu as réellement focalisé sur la semaine.
+- Trancher d'abord la règle de gain et la règle anti-abus, en cohérence avec §2.
+- Garder le calcul (cumul, plafond) dans une fonction pure testable, hors interface.
