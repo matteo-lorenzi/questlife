@@ -94,6 +94,7 @@ export default function App() {
 
     function runDeadlineChecks() {
       useStore.getState().checkDeadlinesAndEmitAlerts(Date.now())
+      useStore.getState().checkAgendaRemindersAndEmitAlerts(Date.now())
     }
 
     globalThis.addEventListener('questlife:toast', onToast)

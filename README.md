@@ -17,6 +17,14 @@ npm run dev
 
 Application disponible sur http://localhost:5173
 
+## Tests
+
+```bash
+npm test
+```
+
+Lance Vitest (`vitest run`) dans un environnement jsdom (le store lit `localStorage` des son import). Le fuseau horaire est fixe (`Europe/Paris`, defini dans `vite.config.js`) pour que les tests de dates soient deterministes. Les tests couvrent la detection de cycle du graphe (`src/utils/graph.test.js`) et l'agenda via l'API publique du store (`src/store/agenda*.test.js`). Pas de React Testing Library : les composants ne sont pas testes.
+
 ## Build production
 
 ```bash
@@ -134,7 +142,14 @@ src/
       ChapterModal.jsx     - Modal creation/edition chapitre
     quest/
       QuestNode.jsx        - Noeud React Flow
-      QuestSidebar.jsx     - Sidebar drag-and-drop
+      QuestSidebar.jsx     - Contenu de l'onglet Quetes (ajout par clic ou drag-and-drop)
+    panel/
+      LeftPanel.jsx        - Panneau gauche a onglets (reductible, preferences memorisees)
+      tabs.js              - Registre des onglets {id, label, component, views}
+    agenda/
+      AgendaTab.jsx        - Onglet Agenda : mini-calendrier, liste du jour, formulaire de creation
+      AgendaSlotRow.jsx    - Ligne d'un creneau : fait, modifier, supprimer, dupliquer
+      DeadlineRow.jsx      - Ligne d'une deadline de quete (lecture seule)
     editor/
       QuestPanel.jsx       - Panel editeur droit
     layout/
@@ -148,6 +163,9 @@ src/
   utils/
     constants.js           - Couleurs, icones, niveaux, badges
     graph.js               - Detection cycle, calcul statuts
+    agenda.js              - Logique pure de l'agenda (jours locaux, validation, normalisation, tri)
+    agendaDeadlines.js     - Deadlines de quetes vues comme elements d'agenda
+    panelPrefs.js          - Preferences du panneau gauche (cle localStorage questlife_left_panel)
 
 ## Fonctionnalites v1
 
@@ -159,6 +177,27 @@ src/
 - Systeme XP + 10 niveaux + 10 badges
 - Navigation : switcher, breadcrumb, Echap
 - Persistance LocalStorage (aucun backend requis)
+- Panneau gauche a onglets et agenda de revisions (voir ci-dessous)
+
+## Panneau gauche
+
+Colonne laterale presente sur l'accueil et dans la vue chapitre. Chaque onglet est une entree du registre `src/components/panel/tabs.js` (`id`, `label`, `component`, `views`) ; ajouter un onglet = ajouter une entree.
+
+- Onglets livres : **Agenda** (accueil et vue chapitre) et **Quetes** (vue chapitre uniquement, ancien `QuestSidebar`, comportement inchange). Le glisser-deposer de quetes n'est donc possible que sur l'onglet Quetes.
+- Onglet par defaut : Agenda sur l'accueil, Quetes dans la vue chapitre, tant que l'utilisateur n'a pas choisi un onglet disponible dans la vue.
+- Un bouton reduit le panneau (bande de 36 px) pour liberer le canvas ; le dernier onglet choisi et l'etat reduit/deploye sont memorises dans `localStorage` sous la cle `questlife_left_panel`, hors de `questlife_data`.
+
+## Onglet Agenda
+
+- Mini-calendrier du mois (navigation, retour a aujourd'hui, jour selectionne distinct d'aujourd'hui, point sur les jours occupes) et liste chronologique du jour dessous.
+- **Creneaux de revision** : formulaire dans le panneau (sans modale) avec titre obligatoire, jour, debut, fin, chapitre optionnel et rappels optionnels (minutes avant le debut, ex. `15, 60`). Depuis la ligne d'un creneau : cocher « fait », modifier, supprimer, dupliquer a la semaine suivante (meme heure locale, +7 jours, non fait, rappels rearmes).
+- Un creneau tient dans une seule journee locale (fin strictement apres le debut) ; chevauchements et creneaux passes autorises. Supprimer un chapitre conserve ses creneaux et efface seulement le lien.
+- **Deadlines de quetes** : affichees en lecture seule dans la liste du jour (expirees et validees incluses, marquees comme telles). Un clic ouvre le chapitre et selectionne la quete.
+- **Rappels** : meme boucle de 30 s et memes notifications (toast + notification desktop) que les deadlines de quetes, une seule fois par decalage. Ils ne fonctionnent que si l'application est ouverte.
+- Aucun effet sur l'XP : « fait » ne touche ni l'XP, ni la serie, ni les objectifs hebdomadaires, ni les badges.
+- Les jours sont toujours en heure locale. Donnees stockees dans le champ `agenda` de `questlife_data` ; une sauvegarde sans `agenda` reste valide et les creneaux invalides sont ignores au chargement.
+
+Idees reportees (recurrence, XP d'agenda, rappels application fermee) : `docs/BACKLOG.md`. Decisions de cadrage : `docs/agenda-plan.md`.
 
 ## Stack
 

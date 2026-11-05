@@ -10,6 +10,14 @@ import {
   CHAPTER_COLORS,
 } from "../utils/constants";
 import { recomputeStatuses } from "../utils/graph";
+import {
+  localDayKey,
+  validateSlotInput,
+  normalizeAgenda,
+  shiftLocalSlot,
+} from "../utils/agenda";
+import { normalizeReminderOffsetsMs, formatReminderLeadTime } from "../utils/reminders";
+import { questDeadlineItems, mergeDayItems } from "../utils/agendaDeadlines";
 
 // ── LocalStorage persistence helper ──────────────────────────────────────────
 const LS_KEY = "questlife_data";
@@ -32,6 +40,7 @@ function saveState(state) {
         quests: state.quests,
         profile: state.profile,
         canvasViewports: state.canvasViewports,
+        agenda: state.agenda,
       }),
     );
   } catch (e) {
@@ -51,15 +60,6 @@ function emitSystemNotification(title, body) {
   );
 }
 
-function normalizeReminderOffsetsMs(offsets) {
-  if (!Array.isArray(offsets)) return [];
-  const clean = offsets
-    .map((v) => Number.parseInt(v, 10))
-    .filter((v) => Number.isFinite(v) && v > 0)
-    .map((v) => Math.max(60000, v));
-  return [...new Set(clean)].sort((a, b) => b - a).slice(0, 8);
-}
-
 function normalizeChecklistItems(items) {
   if (!Array.isArray(items)) return [];
   return items
@@ -70,15 +70,6 @@ function normalizeChecklistItems(items) {
     }))
     .filter((item) => item.label.length > 0)
     .slice(0, 30);
-}
-
-function formatReminderLeadTime(offsetMs) {
-  const minutes = Math.round(offsetMs / 60000);
-  if (minutes >= 43200) return `${Math.round(minutes / 43200)} mois`;
-  if (minutes >= 10080) return `${Math.round(minutes / 10080)} sem`;
-  if (minutes >= 1440) return `${Math.round(minutes / 1440)} j`;
-  if (minutes >= 60) return `${Math.round(minutes / 60)} h`;
-  return `${minutes} min`;
 }
 
 function getInitialTheme() {
@@ -274,6 +265,7 @@ export const useStore = create((set, get) => ({
   })),
   profile: initialProfile,
   canvasViewports: initial.canvasViewports || {},
+  agenda: normalizeAgenda(initial.agenda),
 
   // UI state (not persisted)
   activeChapterId: null,
@@ -287,6 +279,155 @@ export const useStore = create((set, get) => ({
   // ── Persist helper ─────────────────────────────────────────────────────────
   _persist() {
     saveState(get());
+  },
+
+  // ── Agenda (créneaux de révision, jours en heure locale) ───────────────────
+  // Retourne { ok: true, slot } ou { ok: false, error }.
+  createAgendaSlot({ title, startAt, endAt, chapterId = null, reminderOffsetsMs = [] }) {
+    const error = validateSlotInput({ title, startAt, endAt });
+    if (error) return { ok: false, error };
+    const slot = {
+      id: nanoid(),
+      title: title.trim(),
+      startAt,
+      endAt,
+      chapterId: get().chapters.some((c) => c.id === chapterId) ? chapterId : null,
+      done: false,
+      reminderOffsetsMs: normalizeReminderOffsetsMs(reminderOffsetsMs),
+      sentReminderOffsetsMs: [],
+      createdAt: Date.now(),
+    };
+    set((s) => ({ agenda: { ...s.agenda, slots: [...s.agenda.slots, slot] } }));
+    get()._persist();
+    return { ok: true, slot };
+  },
+
+  // Copie un créneau à la même heure locale 7 jours plus tard (non fait, rappels non envoyés).
+  // Retourne { ok: true, slot } ou { ok: false, error }.
+  duplicateAgendaSlotToNextWeek(id) {
+    const src = get().agenda.slots.find((s) => s.id === id);
+    if (!src) return { ok: false, error: "Créneau introuvable." };
+    const { startAt, endAt } = shiftLocalSlot(src.startAt, src.endAt, 7);
+    const error = validateSlotInput({ title: src.title, startAt, endAt });
+    if (error) return { ok: false, error };
+    const slot = {
+      ...src,
+      id: nanoid(),
+      startAt,
+      endAt,
+      done: false,
+      reminderOffsetsMs: [...src.reminderOffsetsMs],
+      sentReminderOffsetsMs: [],
+      createdAt: Date.now(),
+    };
+    set((s) => ({ agenda: { ...s.agenda, slots: [...s.agenda.slots, slot] } }));
+    get()._persist();
+    return { ok: true, slot };
+  },
+
+  // Modifie un créneau (mêmes règles de validation qu'à la création).
+  // patch : { title?, startAt?, endAt?, chapterId?, reminderOffsetsMs? }. Déplacer le créneau ou changer ses rappels les réarme. Retourne { ok, slot } ou { ok: false, error }.
+  updateAgendaSlot(id, patch = {}) {
+    const current = get().agenda.slots.find((s) => s.id === id);
+    if (!current) return { ok: false, error: "Créneau introuvable." };
+    const next = {
+      title: patch.title ?? current.title,
+      startAt: patch.startAt ?? current.startAt,
+      endAt: patch.endAt ?? current.endAt,
+    };
+    const error = validateSlotInput(next);
+    if (error) return { ok: false, error };
+    const chapterId = "chapterId" in patch ? patch.chapterId : current.chapterId;
+    const slot = {
+      ...current,
+      ...next,
+      title: next.title.trim(),
+      chapterId: get().chapters.some((c) => c.id === chapterId) ? chapterId : null,
+    };
+    if (Object.hasOwn(patch, "reminderOffsetsMs")) {
+      slot.reminderOffsetsMs = normalizeReminderOffsetsMs(patch.reminderOffsetsMs);
+    }
+    if (next.startAt !== current.startAt || Object.hasOwn(patch, "reminderOffsetsMs")) {
+      slot.sentReminderOffsetsMs = [];
+    }
+    set((s) => ({ agenda: { ...s.agenda, slots: s.agenda.slots.map((x) => (x.id === id ? slot : x)) } }));
+    get()._persist();
+    return { ok: true, slot };
+  },
+
+  deleteAgendaSlot(id) {
+    set((s) => ({ agenda: { ...s.agenda, slots: s.agenda.slots.filter((x) => x.id !== id) } }));
+    get()._persist();
+  },
+
+  // Émet les rappels de créneaux dus à l'instant `now` (une seule fois par décalage).
+  // Aucun rappel pour un créneau déjà commencé ou marqué « fait ».
+  checkAgendaRemindersAndEmitAlerts(now = Date.now()) {
+    const timestamp = Number.parseInt(now, 10);
+    const nowTs = Number.isFinite(timestamp) ? timestamp : Date.now();
+    const toEmit = [];
+
+    set((s) => {
+      const slots = s.agenda.slots.map((slot) => {
+        if (slot.done || nowTs >= slot.startAt) return slot;
+        const offsets = normalizeReminderOffsetsMs(slot.reminderOffsetsMs);
+        if (offsets.length === 0) return slot;
+        const sent = new Set(normalizeReminderOffsetsMs(slot.sentReminderOffsetsMs));
+        let changed = false;
+        for (const offset of offsets) {
+          if (sent.has(offset)) continue;
+          if (nowTs >= slot.startAt - offset) {
+            sent.add(offset);
+            changed = true;
+            toEmit.push({ slot, offsetMs: offset });
+          }
+        }
+        return changed ? { ...slot, sentReminderOffsetsMs: [...sent].sort((a, b) => b - a) } : slot;
+      });
+      return toEmit.length > 0 ? { agenda: { ...s.agenda, slots } } : {};
+    });
+
+    if (toEmit.length === 0) return;
+
+    for (const { slot, offsetMs } of toEmit) {
+      const msg = `Rappel: "${slot.title}" commence dans ${formatReminderLeadTime(offsetMs)}.`;
+      emitToast(msg, "success");
+      emitSystemNotification("QuestLife - rappel de créneau", msg);
+    }
+    get()._persist();
+  },
+
+  // Coche/décoche « fait ». Sans effet sur l'XP, la série, les objectifs ni les badges.
+  toggleAgendaSlotDone(id) {
+    set((s) => ({
+      agenda: { ...s.agenda, slots: s.agenda.slots.map((x) => (x.id === id ? { ...x, done: !x.done } : x)) },
+    }));
+    get()._persist();
+  },
+
+  // Créneaux + deadlines de quêtes d'un jour local, triés par heure.
+  getAgendaItemsForDay(dayKey, now = Date.now()) {
+    const { agenda, quests } = get();
+    return mergeDayItems(agenda.slots, questDeadlineItems(quests, now), dayKey);
+  },
+
+  // Jours locaux ayant au moins un créneau ou une deadline.
+  getAgendaItemBusyDays() {
+    const { agenda, quests } = get();
+    return [
+      ...new Set([
+        ...agenda.slots.map((s) => localDayKey(s.startAt)),
+        ...questDeadlineItems(quests).map((d) => localDayKey(d.at)),
+      ]),
+    ];
+  },
+
+  // Clic sur une deadline : ouvre le chapitre de la quête et la sélectionne.
+  openAgendaDeadline(questId) {
+    const quest = get().quests.find((q) => q.id === questId);
+    if (!quest) return;
+    get().setActiveChapter(quest.chapterId);
+    get().selectQuest(questId);
   },
 
   // ── Chapters ───────────────────────────────────────────────────────────────
@@ -384,6 +525,10 @@ export const useStore = create((set, get) => ({
     set((s) => ({
       chapters: s.chapters.filter((c) => c.id !== id),
       quests: s.quests.filter((q) => q.chapterId !== id),
+      agenda: {
+        ...s.agenda,
+        slots: s.agenda.slots.map((x) => (x.chapterId === id ? { ...x, chapterId: null } : x)),
+      },
       activeChapterId: s.activeChapterId === id ? null : s.activeChapterId,
     }));
     get()._persist();
