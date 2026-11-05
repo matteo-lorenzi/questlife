@@ -12,6 +12,7 @@ export default function AgendaTab() {
   const agenda = useStore(s => s.agenda)
   const createAgendaSlot = useStore(s => s.createAgendaSlot)
   const getAgendaSlotsForDay = useStore(s => s.getAgendaSlotsForDay)
+  const duplicateAgendaSlotToNextWeek = useStore(s => s.duplicateAgendaSlotToNextWeek)
   const getAgendaBusyDays = useStore(s => s.getAgendaBusyDays)
 
   const todayKey = localDayKey()
@@ -166,6 +167,8 @@ export default function AgendaTab() {
                 <p className="text-xs text-gray-400">
                   {TIME_FMT.format(s.startAt)} – {TIME_FMT.format(s.endAt)}
                 </p>
+                <button type="button" onClick={() => duplicateAgendaSlotToNextWeek(s.id)}
+                  className="mt-1 text-[11px] text-purple-500 hover:underline">Dupliquer à la semaine suivante</button>
               </li>
             ))}
           </ul>

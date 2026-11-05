@@ -15,6 +15,7 @@ import {
   validateSlotInput,
   normalizeAgenda,
   sortSlots,
+  shiftLocalDays,
 } from "../utils/agenda";
 
 // ── LocalStorage persistence helper ──────────────────────────────────────────
@@ -310,6 +311,26 @@ export const useStore = create((set, get) => ({
       chapterId: null,
       done: false,
       reminderOffsetsMs: [],
+      sentReminderOffsetsMs: [],
+      createdAt: Date.now(),
+    };
+    set((s) => ({ agenda: { ...s.agenda, slots: [...s.agenda.slots, slot] } }));
+    get()._persist();
+    return { ok: true, slot };
+  },
+
+  // Copie un créneau à la même heure locale 7 jours plus tard (non fait, rappels non envoyés).
+  // Retourne { ok: true, slot } ou { ok: false, error }.
+  duplicateAgendaSlotToNextWeek(id) {
+    const src = get().agenda.slots.find((s) => s.id === id);
+    if (!src) return { ok: false, error: "Créneau introuvable." };
+    const slot = {
+      ...src,
+      id: nanoid(),
+      startAt: shiftLocalDays(src.startAt, 7),
+      endAt: shiftLocalDays(src.endAt, 7),
+      done: false,
+      reminderOffsetsMs: [...src.reminderOffsetsMs],
       sentReminderOffsetsMs: [],
       createdAt: Date.now(),
     };

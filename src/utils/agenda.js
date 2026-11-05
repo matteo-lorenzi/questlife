@@ -59,6 +59,13 @@ export function normalizeAgenda(raw) {
   return { slots };
 }
 
+// Même heure locale, `days` jours plus tard (résiste aux changements d'heure :
+// on décale le calendrier local, pas un nombre fixe de millisecondes).
+export function shiftLocalDays(ts, days) {
+  const d = new Date(ts);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + days, d.getHours(), d.getMinutes(), d.getSeconds(), d.getMilliseconds()).getTime();
+}
+
 export function sortSlots(slots) {
   return [...slots].sort((a, b) => a.startAt - b.startAt || a.endAt - b.endAt);
 }
