@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../../store/useStore'
 import { localDayKey, localTimestamp } from '../../utils/agenda'
+import { questDeadlineItems, mergeDayItems } from '../../utils/agendaDeadlines'
 import DeadlineRow from './DeadlineRow'
 import AgendaSlotRow, { ChapterSelect, ReminderField, parseReminderMinutes } from './AgendaSlotRow'
 
@@ -10,12 +11,17 @@ const DAY_FMT = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeri
 
 // Onglet Agenda : mini-calendrier du mois, liste du jour, formulaire de création.
 export default function AgendaTab() {
-  const agenda = useStore(s => s.agenda)
+  const slots = useStore(s => s.agenda.slots)
   const createAgendaSlot = useStore(s => s.createAgendaSlot)
-  const getAgendaItemsForDay = useStore(s => s.getAgendaItemsForDay)
-  const getAgendaItemBusyDays = useStore(s => s.getAgendaItemBusyDays)
   const openAgendaDeadline = useStore(s => s.openAgendaDeadline)
-  const quests = useStore(s => s.quests) // re-render quand une deadline change
+  const quests = useStore(s => s.quests)
+
+  // Horloge légère : garde `expired` à jour sans interaction.
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30000)
+    return () => clearInterval(id)
+  }, [])
 
   const todayKey = localDayKey()
   const [selected, setSelected] = useState(todayKey)
@@ -33,9 +39,12 @@ export default function AgendaTab() {
   const [reminders, setReminders] = useState('')
   const [error, setError] = useState('')
 
-  // `agenda` est lu pour re-render quand les créneaux changent.
-  const busy = new Set(agenda && quests ? getAgendaItemBusyDays() : [])
-  const items = getAgendaItemsForDay(selected)
+  const deadlines = useMemo(() => questDeadlineItems(quests, now), [quests, now])
+  const busy = useMemo(() => new Set([
+    ...slots.map(s => localDayKey(s.startAt)),
+    ...deadlines.map(d => localDayKey(d.at)),
+  ]), [slots, deadlines])
+  const items = useMemo(() => mergeDayItems(slots, deadlines, selected), [slots, deadlines, selected])
 
   const first = new Date(cursor.year, cursor.month, 1)
   const offset = (first.getDay() + 6) % 7 // lundi en premier

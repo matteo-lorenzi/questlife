@@ -24,7 +24,9 @@ export function questDeadlineItems(quests, now = Date.now()) {
 
 // Éléments d'un jour (créneaux + deadlines) triés par heure.
 export function mergeDayItems(slots, deadlines, dayKey) {
-  const slotItems = slots.map((s) => ({ ...s, kind: "slot", at: s.startAt }));
+  const slotItems = slots
+    .filter((s) => localDayKey(s.startAt) === dayKey)
+    .map((s) => ({ ...s, kind: "slot", at: s.startAt }));
   const dlItems = deadlines.filter((d) => localDayKey(d.at) === dayKey);
   return [...slotItems, ...dlItems].sort((a, b) => a.at - b.at);
 }

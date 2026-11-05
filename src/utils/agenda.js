@@ -1,5 +1,6 @@
 // Logique pure de l'agenda. Tous les jours sont des jours LOCAUX (jamais UTC).
 import { nanoid } from "nanoid";
+import { normalizeReminderOffsetsMs } from "./reminders";
 
 const pad = (n) => String(n).padStart(2, "0");
 
@@ -51,8 +52,8 @@ export function normalizeAgenda(raw) {
       endAt: s.endAt,
       chapterId: typeof s.chapterId === "string" ? s.chapterId : null,
       done: s.done === true,
-      reminderOffsetsMs: Array.isArray(s.reminderOffsetsMs) ? s.reminderOffsetsMs.filter(Number.isFinite) : [],
-      sentReminderOffsetsMs: Array.isArray(s.sentReminderOffsetsMs) ? s.sentReminderOffsetsMs.filter(Number.isFinite) : [],
+      reminderOffsetsMs: normalizeReminderOffsetsMs(s.reminderOffsetsMs),
+      sentReminderOffsetsMs: normalizeReminderOffsetsMs(s.sentReminderOffsetsMs),
       createdAt: Number.isFinite(s.createdAt) ? s.createdAt : s.startAt,
     });
   }
@@ -64,6 +65,16 @@ export function normalizeAgenda(raw) {
 export function shiftLocalDays(ts, days) {
   const d = new Date(ts);
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() + days, d.getHours(), d.getMinutes(), d.getSeconds(), d.getMilliseconds()).getTime();
+}
+
+// Décale un créneau (début + fin) de `days` jours locaux en gardant un créneau valide :
+// si le décalage indépendant écrase la durée (trou de changement d'heure), la fin
+// est recalculée à partir du nouveau début + durée d'origine.
+export function shiftLocalSlot(startAt, endAt, days) {
+  const newStart = shiftLocalDays(startAt, days);
+  let newEnd = shiftLocalDays(endAt, days);
+  if (newEnd <= newStart) newEnd = newStart + (endAt - startAt);
+  return { startAt: newStart, endAt: newEnd };
 }
 
 export function sortSlots(slots) {
