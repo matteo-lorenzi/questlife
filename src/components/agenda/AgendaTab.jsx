@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useStore } from '../../store/useStore'
 import { localDayKey, localTimestamp } from '../../utils/agenda'
+import AgendaSlotRow, { ChapterSelect } from './AgendaSlotRow'
 
 const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 const MONTH_FMT = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' })
@@ -26,6 +27,7 @@ export default function AgendaTab() {
   const [day, setDay] = useState(todayKey)
   const [start, setStart] = useState('18:00')
   const [end, setEnd] = useState('19:00')
+  const [chapterId, setChapterId] = useState(null)
   const [error, setError] = useState('')
 
   // `agenda` est lu pour re-render quand les créneaux changent.
@@ -68,6 +70,7 @@ export default function AgendaTab() {
       title,
       startAt: localTimestamp(day, start),
       endAt: localTimestamp(day, end),
+      chapterId,
     })
     if (!result.ok) {
       setError(result.error)
@@ -75,6 +78,7 @@ export default function AgendaTab() {
     }
     setError('')
     setTitle('')
+    setChapterId(null)
     setFormOpen(false)
     selectDay(day)
     const d = new Date(result.slot.startAt)
@@ -147,6 +151,7 @@ export default function AgendaTab() {
               <input type="time" value={end} onChange={e => setEnd(e.target.value)}
                 aria-label="Fin" className={inputCls} />
             </div>
+            <ChapterSelect value={chapterId} onChange={setChapterId} />
             {error && <p role="alert" className="text-xs text-red-500">{error}</p>}
             <div className="flex gap-1.5">
               <button type="submit" className="flex-1 text-xs py-1 rounded-md bg-purple-500 text-white hover:bg-purple-600">Créer</button>
@@ -160,14 +165,7 @@ export default function AgendaTab() {
           <p className="text-xs text-gray-400">Aucun créneau ce jour.</p>
         ) : (
           <ul className="space-y-1">
-            {slots.map(s => (
-              <li key={s.id} className="px-2 py-1.5 rounded-lg border border-gray-100 dark:border-zinc-800">
-                <p className="text-xs font-medium truncate">{s.title}</p>
-                <p className="text-xs text-gray-400">
-                  {TIME_FMT.format(s.startAt)} – {TIME_FMT.format(s.endAt)}
-                </p>
-              </li>
-            ))}
+            {slots.map(s => <AgendaSlotRow key={s.id} slot={s} />)}
           </ul>
         )}
       </div>
