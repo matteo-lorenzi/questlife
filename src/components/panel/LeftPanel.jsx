@@ -3,10 +3,14 @@ import { loadPanelPrefs, savePanelPrefs } from '../../utils/panelPrefs'
 
 // Panneau gauche à onglets. `tabs` est un registre [{ id, label, component }].
 // Les composants d'onglet reçoivent `tabProps`.
-export default function LeftPanel({ tabs, tabProps = {} }) {
+// `defaultTab` : onglet affiché tant que l'utilisateur n'en a pas mémorisé un
+// disponible dans cette vue.
+export default function LeftPanel({ tabs, tabProps = {}, defaultTab }) {
   const [prefs, setPrefs] = useState(loadPanelPrefs)
 
-  const activeTab = tabs.find(t => t.id === prefs.activeTab) ?? tabs[0]
+  const activeTab = tabs.find(t => t.id === prefs.activeTab)
+    ?? tabs.find(t => t.id === defaultTab)
+    ?? tabs[0]
   const ActiveComponent = activeTab?.component
 
   function update(patch) {
@@ -28,7 +32,7 @@ export default function LeftPanel({ tabs, tabProps = {} }) {
   }
 
   return (
-    <div className="w-44 flex-shrink-0 bg-white dark:bg-zinc-900 border-r border-gray-100 dark:border-zinc-800 flex flex-col min-h-0">
+    <div className="w-64 flex-shrink-0 bg-white dark:bg-zinc-900 border-r border-gray-100 dark:border-zinc-800 flex flex-col min-h-0">
       <div className="flex items-center gap-1 px-2 py-2 border-b border-gray-100 dark:border-zinc-800">
         <div role="tablist" className="flex-1 flex gap-1 min-w-0">
           {tabs.map(t => (

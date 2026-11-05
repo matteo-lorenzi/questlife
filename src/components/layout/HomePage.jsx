@@ -2,6 +2,8 @@ import React from 'react'
 import { useStore } from '../../store/useStore'
 import ChapterCard from '../chapters/ChapterCard'
 import { Btn, ProgressBar } from '../ui'
+import LeftPanel from '../panel/LeftPanel'
+import { tabsForView } from '../panel/tabs'
 import { getLevelFromXP, getNextLevel } from '../../utils/constants'
 
 export default function HomePage() {
@@ -70,6 +72,8 @@ export default function HomePage() {
       </header>
 
       {/* Content */}
+      <div className="flex flex-1 min-h-0">
+      <LeftPanel tabs={tabsForView('home')} defaultTab="agenda" />
       <main className="flex-1 overflow-y-auto p-6 bg-gray-50 dark:bg-zinc-950">
         <div className="max-w-3xl mx-auto">
           {/* Section header */}
@@ -112,6 +116,7 @@ export default function HomePage() {
           )}
         </div>
       </main>
+      </div>
     </div>
   )
 }
