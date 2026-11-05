@@ -26,6 +26,12 @@ const pathKey = Object.keys(env).find((k) => k.toLowerCase() === "path") || "PAT
 env[pathKey] = `${binDir}${path.delimiter}${env[pathKey] || ""}`;
 
 const concurrentlyBin = require("./resolve-bin.cjs").resolveBin("concurrently");
+// Utilisé par les tests : valide la résolution du binaire sans lancer vite ni Electron.
+if (process.env.QUESTLIFE_DRY_RUN) {
+  console.log(concurrentlyBin);
+  process.exit(0);
+}
+
 const child = spawn(
   process.execPath,
   [concurrentlyBin, "-k", "vite --strictPort", "wait-on http://localhost:5173 && electron ."],

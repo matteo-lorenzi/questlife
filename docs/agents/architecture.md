@@ -37,4 +37,4 @@ No schema version: each loader normalises tolerantly. Timer state and the main v
 
 ## Electron dev profiles
 
-`npm run electron:dev | electron:demo | electron:empty` select a data profile through `QUESTLIFE_PROFILE` (separate `userData` folder, see `electron/main.cjs` and `scripts/electron-dev.cjs`). Commands and demo contents: `README.md`.
+`npm run electron:dev | electron:demo | electron:empty` select a data profile through `QUESTLIFE_PROFILE` (separate `userData` folder, see `electron/main.cjs` and `scripts/electron-dev.cjs`). Commands and demo contents: `README.md`. Resolve package binaries with `resolveBin()` from `scripts/resolve-bin.cjs`, never `require.resolve("pkg/sub/path")` (packages with `exports` reject it; ESLint enforces this).
