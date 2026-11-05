@@ -45,6 +45,20 @@ Date de rédaction : 2026-11-05 (session de cadrage de la feature « Agenda int�
 
 ---
 
-## 3. Limite connue : rappels uniquement application ouverte
+## 3. Vue semaine de l'agenda
+
+**Idée.** Afficher plusieurs jours côte à côte (colonnes Lun, Mar…) dans une grille horaire, comme un calendrier hebdomadaire classique.
+
+**Pourquoi pas maintenant.** Le panneau gauche fait 256 px : une grille multi-jours y serait illisible. Il faudrait un panneau élargissable ou une vue plein écran dédiée.
+
+**Ce qui est fait à la place.** Une grille horaire d'une seule journée (le jour sélectionné dans le mini-calendrier), sous le calendrier.
+
+**Pour reprendre.**
+- Réutiliser le calcul de mise en page de la grille du jour (placement par heure, chevauchements) en le rendant indépendant du nombre de colonnes.
+- Décider d'abord où vit la vue : panneau élargissable, ou page d'agenda à part.
+
+---
+
+## 4. Limite connue : rappels uniquement application ouverte
 
 Les rappels de créneaux utilisent le circuit de notifications desktop existant, vérifié toutes les 30 s dans l'application. Ils ne se déclenchent donc **que si QuestLife est ouvert**, comme les alarmes de deadline des quêtes. Pour des rappels application fermée, il faudrait un service en arrière-plan côté Electron (planificateur dans le processus principal ou tâche système) ; c'est hors périmètre de la feature Agenda.

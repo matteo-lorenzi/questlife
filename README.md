@@ -147,9 +147,10 @@ src/
       LeftPanel.jsx        - Panneau gauche a onglets (reductible, preferences memorisees)
       tabs.js              - Registre des onglets {id, label, component, views}
     agenda/
-      AgendaTab.jsx        - Onglet Agenda : mini-calendrier, liste du jour, formulaire de creation
+      AgendaTab.jsx        - Onglet Agenda : mini-calendrier, grille horaire du jour, formulaire de creation
       AgendaSlotRow.jsx    - Ligne d'un creneau : fait, modifier, supprimer, dupliquer
-      DeadlineRow.jsx      - Ligne d'une deadline de quete (lecture seule)
+      AgendaGrid.jsx       - Grille horaire du jour : axe 06:00-23:00, blocs, bandes hors plage, carte flottante
+      AgendaDeadlineButton.jsx - Repere de deadline de quete (lecture seule), partage par la grille et les bandes
     editor/
       QuestPanel.jsx       - Panel editeur droit
     layout/
@@ -189,10 +190,10 @@ Colonne laterale presente sur l'accueil et dans la vue chapitre. Chaque onglet e
 
 ## Onglet Agenda
 
-- Mini-calendrier du mois (navigation, retour a aujourd'hui, jour selectionne distinct d'aujourd'hui, point sur les jours occupes) et liste chronologique du jour dessous.
+- Mini-calendrier du mois (navigation, retour a aujourd'hui, jour selectionne distinct d'aujourd'hui, point sur les jours occupes) et **Grille horaire** du jour dessous (`AgendaGrid`) : axe 06:00-23:00 (48 px par heure), creneaux en blocs a leur plage horaire, deadlines en reperes a leur heure, elements qui se chevauchent places cote a cote, ligne de l'heure actuelle sur aujourd'hui. Un creneau qui deborde de la plage est tronque et marque (« ↑ dès » / « ↓ jusqu'à ») ; un element entierement hors plage (avant 06:00, ou a partir de 23:00) va dans une bande fixe « Avant 06:00 » / « Après 23:00 ». **Un clic sur une zone vide de la grille ouvre le formulaire de creation pre-rempli** (heure arrondie a la demi-heure, duree 1 h, debut plafonne a 22:30) ; un clic sur un creneau ouvre une carte flottante (fait, modifier, supprimer, dupliquer) ; un jour vide affiche une invitation.
 - **Creneaux de revision** : formulaire dans le panneau (sans modale) avec titre obligatoire, jour, debut, fin, chapitre optionnel et rappels optionnels (minutes avant le debut, ex. `15, 60`). Depuis la ligne d'un creneau : cocher « fait », modifier, supprimer, dupliquer a la semaine suivante (meme heure locale, +7 jours, non fait, rappels rearmes).
 - Un creneau tient dans une seule journee locale (fin strictement apres le debut) ; chevauchements et creneaux passes autorises. Supprimer un chapitre conserve ses creneaux et efface seulement le lien.
-- **Deadlines de quetes** : affichees en lecture seule dans la liste du jour (expirees et validees incluses, marquees comme telles). Un clic ouvre le chapitre et selectionne la quete.
+- **Deadlines de quetes** : affichees en lecture seule dans la grille horaire (expirees et validees incluses, marquees comme telles). Un clic ouvre le chapitre et selectionne la quete.
 - **Rappels** : meme boucle de 30 s et memes notifications (toast + notification desktop) que les deadlines de quetes, une seule fois par decalage. Ils ne fonctionnent que si l'application est ouverte.
 - Aucun effet sur l'XP : « fait » ne touche ni l'XP, ni la serie, ni les objectifs hebdomadaires, ni les badges.
 - Les jours sont toujours en heure locale. Donnees stockees dans le champ `agenda` de `questlife_data` ; une sauvegarde sans `agenda` reste valide et les creneaux invalides sont ignores au chargement.

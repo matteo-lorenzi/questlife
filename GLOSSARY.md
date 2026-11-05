@@ -19,8 +19,12 @@ _Avoid_: Échéance, date butoir
 ## Agenda
 
 **Agenda**:
-Le calendrier intégré où l'utilisateur planifie son emploi du temps de révisions, tous chapitres confondus. Il affiche, pour un jour choisi dans un mini-calendrier du mois, les créneaux de révision et les deadlines de quêtes (lecture seule, expirées incluses, marquées comme telles ; un clic ouvre le chapitre et sélectionne la quête). Les jours sont en heure locale.
+Le calendrier intégré où l'utilisateur planifie son emploi du temps de révisions, tous chapitres confondus. Il affiche, pour un jour choisi dans un mini-calendrier du mois, les créneaux de révision et les deadlines de quêtes (lecture seule, expirées incluses, marquées comme telles ; un clic ouvre le chapitre et sélectionne la quête), placés selon leur heure dans la **Grille horaire**. Les jours sont en heure locale.
 _Avoid_: Planning, calendrier
+
+**Grille horaire**:
+La vue du jour sélectionné, sous le mini-calendrier : une seule colonne avec un axe des heures de 06:00 à 23:00, où les créneaux de révision occupent leur plage et les deadlines sont des repères à leur heure. Les éléments qui se chevauchent se placent côte à côte. Un créneau qui déborde de la plage est tronqué à sa limite et marqué ; un élément entièrement hors plage (avant 06:00, ou à partir de 23:00 pile) va dans une bande fixe « Avant 06:00 » ou « Après 23:00 », visible sans défiler. Un clic sur un créneau ouvre ses actions dans une carte flottante (un clic dans le vide ferme cette carte, sans rien créer) ; un clic sur une zone vide prépare un créneau d'une heure à l'heure cliquée, arrondie à la demi-heure et plafonnée à 22:30 pour que le créneau reste visible dans la grille. Un jour sans élément affiche une invitation à cliquer sur la grille. Une ligne marque l'heure actuelle sur aujourd'hui.
+_Avoid_: Timeline, vue jour
 
 **Créneau de révision**:
 Une plage horaire que l'utilisateur réserve dans l'agenda pour réviser, qui commence et finit le même jour. Il peut être rattaché à un chapitre (le supprimer conserve le créneau et efface le lien) et marqué « fait », sans effet sur l'XP, la série, les objectifs hebdomadaires ni les badges. Il peut être modifié, supprimé, ou dupliqué à la semaine suivante (même heure locale, +7 jours). Il appartient à l'agenda, pas à une quête.

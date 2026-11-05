@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { daySlots } from "./agendaTestHelpers";
 
 // Tests go through the public store API only (actions / selectors).
 // The store reads localStorage at import, so each test gets a fresh module.
@@ -26,9 +27,9 @@ describe("agenda slots", () => {
     expect(late.ok).toBe(true);
     expect(early.ok).toBe(true);
 
-    const titles = store.getState().getAgendaItemsForDay("2026-11-05").filter((i) => i.kind === "slot").map((s) => s.title);
+    const titles = daySlots(store, "2026-11-05").map((s) => s.title);
     expect(titles).toEqual(["Matin", "Soir"]);
-    expect(store.getState().getAgendaItemsForDay("2026-11-06").filter((i) => i.kind === "slot")).toEqual([]);
+    expect(daySlots(store, "2026-11-06")).toEqual([]);
   });
 
   it("rejects invalid slots with a clear message and stores nothing", async () => {
@@ -54,18 +55,18 @@ describe("agenda slots", () => {
     const { createAgendaSlot } = store.getState();
     expect(createAgendaSlot({ title: "A", startAt: at(2001, 1, 2, 9), endAt: at(2001, 1, 2, 11) }).ok).toBe(true);
     expect(createAgendaSlot({ title: "B", startAt: at(2001, 1, 2, 10), endAt: at(2001, 1, 2, 12) }).ok).toBe(true);
-    expect(store.getState().getAgendaItemsForDay("2001-01-02").filter((i) => i.kind === "slot")).toHaveLength(2);
+    expect(daySlots(store, "2001-01-02")).toHaveLength(2);
   });
 
   it("keeps a 23:30 slot on its local day (not the UTC day)", async () => {
     const store = await freshStore();
     const r = store.getState().createAgendaSlot({ title: "Tard", startAt: at(2026, 7, 14, 23, 30), endAt: at(2026, 7, 14, 23, 45) });
     expect(r.ok).toBe(true);
-    expect(store.getState().getAgendaItemsForDay("2026-07-14").filter((i) => i.kind === "slot")).toHaveLength(1);
+    expect(daySlots(store, "2026-07-14")).toHaveLength(1);
     expect(store.getState().getAgendaItemBusyDays()).toEqual(["2026-07-14"]);
     // 00:10 local in summer is still the previous UTC day: must land on the local day.
     store.getState().createAgendaSlot({ title: "Tôt", startAt: at(2026, 7, 15, 0, 10), endAt: at(2026, 7, 15, 0, 40) });
-    expect(store.getState().getAgendaItemsForDay("2026-07-15").filter((i) => i.kind === "slot").map((s) => s.title)).toEqual(["Tôt"]);
+    expect(daySlots(store, "2026-07-15").map((s) => s.title)).toEqual(["Tôt"]);
   });
 
   it("persists slots in the main save and reloads them", async () => {
@@ -77,7 +78,7 @@ describe("agenda slots", () => {
 
     vi.resetModules();
     const { useStore } = await import("./useStore");
-    expect(useStore.getState().getAgendaItemsForDay("2026-11-05").filter((i) => i.kind === "slot").map((s) => s.title)).toEqual(["Survit"]);
+    expect(daySlots(useStore, "2026-11-05").map((s) => s.title)).toEqual(["Survit"]);
   });
 
   it("loads an existing save without agenda", async () => {
@@ -102,7 +103,7 @@ describe("agenda slots", () => {
         { id: "nan", title: "NaN", startAt: "x", endAt: null },
       ] },
     });
-    expect(store.getState().getAgendaItemsForDay("2026-11-05").filter((i) => i.kind === "slot").map((s) => s.id)).toEqual(["good"]);
+    expect(daySlots(store, "2026-11-05").map((s) => s.id)).toEqual(["good"]);
   });
 
   it("normalizes reminder arrays of a loaded slot like quest reminders", async () => {

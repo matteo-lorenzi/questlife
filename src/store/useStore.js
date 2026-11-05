@@ -15,9 +15,11 @@ import {
   validateSlotInput,
   normalizeAgenda,
   shiftLocalSlot,
+  buildGridItems,
+  assignOverlapColumns,
 } from "../utils/agenda";
 import { normalizeReminderOffsetsMs, formatReminderLeadTime } from "../utils/reminders";
-import { questDeadlineItems, mergeDayItems } from "../utils/agendaDeadlines";
+import { questDeadlineItems, buildGridDeadlines } from "../utils/agendaDeadlines";
 
 // ── LocalStorage persistence helper ──────────────────────────────────────────
 const LS_KEY = "questlife_data";
@@ -405,10 +407,18 @@ export const useStore = create((set, get) => ({
     get()._persist();
   },
 
-  // Créneaux + deadlines de quêtes d'un jour local, triés par heure.
-  getAgendaItemsForDay(dayKey, now = Date.now()) {
+  // Grille horaire d'un jour local : créneaux en minutes depuis 06:00 (aucun pixel).
+  getAgendaGridForDay(dayKey, now = Date.now()) {
     const { agenda, quests } = get();
-    return mergeDayItems(agenda.slots, questDeadlineItems(quests, now), dayKey);
+    const slots = buildGridItems(agenda.slots, dayKey);
+    const deadlines = buildGridDeadlines(questDeadlineItems(quests, now), dayKey);
+    const byTime = (a, b) => a.startMin - b.startMin;
+    return {
+      items: assignOverlapColumns([...slots.items, ...deadlines.items].sort(byTime)),
+      // Bandes fixes : éléments entièrement avant 06:00 / après 23:00.
+      before: [...slots.before, ...deadlines.before].sort(byTime),
+      after: [...slots.after, ...deadlines.after].sort(byTime),
+    };
   },
 
   // Jours locaux ayant au moins un créneau ou une deadline.

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { dayEntries } from "./agendaTestHelpers";
 
 // Tests go through the public store API only.
 async function freshStore() {
@@ -27,7 +28,7 @@ function clearDeadlines(store) {
   });
 }
 
-describe("agenda day items (slots + quest deadlines)", () => {
+describe("agenda day entries (slots + quest deadlines, read through the grid)", () => {
   beforeEach(() => localStorage.clear());
 
   it("mixes slots and deadlines of a day, sorted by time", async () => {
@@ -38,7 +39,7 @@ describe("agenda day items (slots + quest deadlines)", () => {
     addQuest(store, { title: "Rendu", deadlineAt: at(2030, 5, 10, 14), deadlineMode: "absolute" });
     addQuest(store, { title: "Autre jour", deadlineAt: at(2030, 5, 11, 14), deadlineMode: "absolute" });
 
-    const items = store.getState().getAgendaItemsForDay("2030-05-10");
+    const items = dayEntries(store, "2030-05-10");
     expect(items.map((i) => [i.kind, i.title])).toEqual([
       ["slot", "Matin"],
       ["deadline", "Rendu"],
@@ -50,8 +51,8 @@ describe("agenda day items (slots + quest deadlines)", () => {
     const store = await freshStore();
     clearDeadlines(store);
     addQuest(store, { title: "Tard", deadlineAt: at(2030, 5, 10, 23, 30), deadlineMode: "absolute" });
-    expect(store.getState().getAgendaItemsForDay("2030-05-10")).toHaveLength(1);
-    expect(store.getState().getAgendaItemsForDay("2030-05-11")).toHaveLength(0);
+    expect(dayEntries(store, "2030-05-10")).toHaveLength(1);
+    expect(dayEntries(store, "2030-05-11")).toHaveLength(0);
   });
 
   it("marks past deadlines as expired and validated quests as done, not urgent", async () => {
@@ -62,7 +63,7 @@ describe("agenda day items (slots + quest deadlines)", () => {
     addQuest(store, { title: "Future", deadlineAt: at(2001, 1, 2, 14), deadlineMode: "absolute" });
     const now = at(2001, 1, 2, 13, 30);
     const byTitle = Object.fromEntries(
-      store.getState().getAgendaItemsForDay("2001-01-02", now).map((i) => [i.title, i]),
+      dayEntries(store, "2001-01-02", now).map((i) => [i.title, i]),
     );
     expect(byTitle["Passée"]).toMatchObject({ expired: true, done: false });
     expect(byTitle["Validée"]).toMatchObject({ expired: false, done: true });
