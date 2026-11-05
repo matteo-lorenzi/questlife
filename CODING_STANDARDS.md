@@ -7,6 +7,10 @@ Read during review, not implementation. Only judgement calls live here; mechanic
 - Code that depends on "now" takes `now` as a parameter and is tested at several instants: just after midnight, late Sunday, Monday morning, a daylight-saving change. A test pinned to one time of day hides the bugs that appear near day and week boundaries.
 - Agenda code uses local days; profile code (streak, activity log) uses UTC days. Mixing the two in one computation needs a comment saying which is meant.
 
+## Conventions
+
+- UI code follows `docs/agents/conventions.md` (dark variants, `memo` on the canvas node, no emoji icons, persistence only in the store).
+
 ## Reuse
 
 - Before reimplementing a rule (week key, status recompute, reminder normalisation), check `src/utils/` and the stores. When a rule must be copied, add a test that fails if the copies drift.

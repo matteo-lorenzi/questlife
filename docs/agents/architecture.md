@@ -1,6 +1,6 @@
 # Architecture
 
-Where things live and the gotchas no config file confesses. Canonical for agents: `.github/copilot-instructions.md` overlaps but lags (no To-do, Electron or demo profiles).
+Where things live and the gotchas no config file confesses. Product rules and UI conventions: `docs/agents/conventions.md`.
 
 React 18 + Vite 5 + zustand + Tailwind, plain JS. Runs in a browser (`npm run dev`) and in Electron (`electron/main.cjs`). No backend: everything is in `localStorage`.
 

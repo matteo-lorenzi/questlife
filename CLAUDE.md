@@ -14,7 +14,7 @@ Single-context: one `GLOSSARY.md` + `docs/adr/` at the repo root. See `docs/agen
 
 ### Architecture
 
-Persistence keys, store and util layout, and gotchas (stores hydrate at import, UTC vs local days). See `docs/agents/architecture.md`.
+Persistence keys, store and util layout, and gotchas (stores hydrate at import, UTC vs local days). See `docs/agents/architecture.md`. Product rules, profile/privacy and UI and dark-mode conventions: `docs/agents/conventions.md`.
 
 ### Coding standards
 
