@@ -5,6 +5,7 @@ import ChapterCard from '../chapters/ChapterCard'
 import { Btn, ProgressBar } from '../ui'
 import LeftPanel from '../panel/LeftPanel'
 import FocusPill from '../focus/FocusPill'
+import TodoView from '../todo/TodoView'
 import { tabsForView } from '../panel/tabs'
 import { getLevelFromXP, getNextLevel } from '../../utils/constants'
 
@@ -81,7 +82,7 @@ export default function HomePage() {
       <div className="flex flex-1 min-h-0">
       <LeftPanel tabs={tabsForView('home')} defaultTab="agenda" mainTabId={mainView} onSelectMainTab={setMainView} />
       <main className="flex-1 overflow-y-auto p-6 bg-gray-50 dark:bg-zinc-950">
-        {mainView === 'todo' ? <div>To-do</div> : (
+        {mainView === 'todo' ? <TodoView /> : (
         <div className="max-w-3xl mx-auto">
           {/* Section header */}
           <div className="flex items-center justify-between mb-5">
