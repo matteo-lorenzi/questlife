@@ -23,13 +23,18 @@ export function questDeadlineItems(quests, now = Date.now()) {
 }
 
 // Deadlines d'un jour local comme repères d'une ligne de la grille (startMin === endMin).
-// Celles hors de la plage 06:00-23:00 sont exclues ici (bandes : ticket suivant).
+// Celles hors de la plage 06:00-23:00 vont dans `before` / `after` (bandes).
 export function buildGridDeadlines(deadlines, dayKey) {
   const max = (GRID_END_HOUR - GRID_START_HOUR) * 60;
-  return deadlines
-    .filter((d) => localDayKey(d.at) === dayKey)
-    .map((d) => ({ ...d, startMin: minutesSinceGridStart(d.at), endMin: minutesSinceGridStart(d.at) }))
-    .filter((d) => d.startMin >= 0 && d.startMin <= max);
+  const result = { items: [], before: [], after: [] };
+  for (const d of deadlines.filter((x) => localDayKey(x.at) === dayKey)) {
+    const startMin = minutesSinceGridStart(d.at);
+    const item = { ...d, startMin, endMin: startMin };
+    if (startMin < 0) result.before.push(item);
+    else if (startMin > max) result.after.push(item);
+    else result.items.push(item);
+  }
+  return result;
 }
 
 // Éléments d'un jour (créneaux + deadlines) triés par heure.

@@ -28,7 +28,7 @@ export default function AgendaGrid({ dayKey, todayKey, now, onCreateAt }) {
   const grid = useMemo(() => getAgendaGridForDay(dayKey, now), [getAgendaGridForDay, dayKey, now, slots, quests])
   // Créneau supprimé ou déplacé hors du jour : la carte se ferme.
   useEffect(() => {
-    if (open && !grid.items.some(i => i.id === open.id)) setOpen(null)
+    if (open && ![...grid.items, ...grid.before, ...grid.after].some(i => i.id === open.id)) setOpen(null)
   }, [open, grid])
   const isToday = dayKey === todayKey
   const nowMin = minutesSinceGridStart(now)
@@ -45,9 +45,12 @@ export default function AgendaGrid({ dayKey, todayKey, now, onCreateAt }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dayKey])
 
+  const bandProps = { chapters, openAgendaDeadline, onOpenSlot: setOpen }
+
   return (
-    <div ref={scrollRef} data-testid="agenda-grid"
-      className="relative overflow-y-auto h-72 rounded-lg border border-gray-100 dark:border-zinc-800">
+    <div className="rounded-lg border border-gray-100 dark:border-zinc-800">
+    {grid.before.length > 0 && <Band testid="agenda-band-before" label="Avant 06:00" items={grid.before} {...bandProps} />}
+    <div ref={scrollRef} data-testid="agenda-grid" className="relative overflow-y-auto h-72">
       <div className="relative" style={{ height: TOTAL_PX + 8 }}
         onClick={e => {
           // Seule une zone vide déclenche la création (blocs et repères stoppent la propagation).
@@ -93,7 +96,9 @@ export default function AgendaGrid({ dayKey, todayKey, now, onCreateAt }) {
                 onClick={e => setOpen({ id: item.id, rect: e.currentTarget.getBoundingClientRect() })}
                 className="absolute overflow-hidden rounded-md px-1.5 py-0.5 text-left text-[11px] leading-tight text-gray-800 dark:text-gray-100 bg-purple-100/80 dark:bg-zinc-800 cursor-pointer"
                 style={{ top: item.startMin * PX_PER_MIN, height, ...colStyle(item), borderLeft: `3px solid ${accent}`, backgroundColor: `${accent}26` }}>
+                {item.startMarker && <span data-testid="agenda-marker-start" className="block text-[9px] leading-none opacity-70">{item.startMarker}</span>}
                 <span className={`font-medium ${item.done ? 'line-through opacity-60' : ''}`}>{item.title}</span>
+                {item.endMarker && <span data-testid="agenda-marker-end" className="block text-[9px] leading-none opacity-70">{item.endMarker}</span>}
               </button>
             )
           })}
@@ -106,9 +111,51 @@ export default function AgendaGrid({ dayKey, todayKey, now, onCreateAt }) {
           </div>
         )}
       </div>
-      {openSlot && (
-        <SlotPopover slot={openSlot} rect={open.rect} scrollRef={scrollRef} onClose={() => setOpen(null)} />
-      )}
+    </div>
+    {grid.after.length > 0 && <Band testid="agenda-band-after" label="Après 23:00" items={grid.after} {...bandProps} />}
+    {openSlot && (
+      <SlotPopover slot={openSlot} rect={open.rect} scrollRef={scrollRef} onClose={() => setOpen(null)} />
+    )}
+    </div>
+  )
+}
+
+// Bande fixe (hors de la zone qui défile) pour les éléments entièrement hors plage.
+// Les éléments se placent côte à côte et passent à la ligne si nécessaire.
+function Band({ testid, label, items, chapters, openAgendaDeadline, onOpenSlot }) {
+  return (
+    <div data-testid={testid}
+      className="px-1.5 py-1 bg-gray-50 dark:bg-zinc-800/50 border-gray-100 dark:border-zinc-800 first:border-b last:border-t">
+      <div className="text-[9px] leading-none uppercase tracking-wide text-gray-400 mb-1">{label}</div>
+      <div className="flex flex-wrap gap-1">
+        {items.map(item => {
+          const time = `${pad(Math.floor((item.startMin + GRID_START_HOUR * 60) / 60))}:${pad((item.startMin + GRID_START_HOUR * 60) % 60)}`
+          if (item.kind === 'deadline') {
+            const tone = item.done
+              ? 'border-gray-300 dark:border-zinc-600 text-gray-400 line-through'
+              : item.expired
+                ? 'border-red-400 dark:border-red-500/60 text-red-600 dark:text-red-400'
+                : 'border-amber-400 dark:border-amber-500/60 text-amber-700 dark:text-amber-300'
+            return (
+              <button key={item.id} type="button" data-testid="agenda-band-deadline" data-grid-item
+                onClick={() => openAgendaDeadline(item.questId)}
+                className={`flex-1 basis-[45%] min-w-0 flex items-center gap-1 px-1.5 py-0.5 text-left text-[11px] leading-tight truncate border-t-2 border-dashed bg-white/80 dark:bg-zinc-900/80 ${tone}`}>
+                <span>⚑</span>
+                <span className="truncate">{time} {item.title || 'Quête sans titre'}</span>
+              </button>
+            )
+          }
+          const accent = chapters.find(c => c.id === item.chapterId)?.color?.accent || '#a855f7'
+          return (
+            <button key={item.id} type="button" title={item.title} data-slot-id={item.id} data-grid-item data-testid="agenda-band-slot"
+              onClick={e => onOpenSlot({ id: item.id, rect: e.currentTarget.getBoundingClientRect() })}
+              className="flex-1 basis-[45%] min-w-0 overflow-hidden rounded-md px-1.5 py-0.5 text-left text-[11px] leading-tight text-gray-800 dark:text-gray-100 cursor-pointer"
+              style={{ borderLeft: `3px solid ${accent}`, backgroundColor: `${accent}26` }}>
+              <span className={`block truncate font-medium ${item.done ? 'line-through opacity-60' : ''}`}>{time} {item.title}</span>
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }
