@@ -10,7 +10,7 @@ _Avoid_: Matière, catégorie, projet
 
 **Quête**:
 Un objectif unique à l'intérieur d'un chapitre, qui rapporte de l'XP une fois validé.
-_Avoid_: Tâche, mission, to-do
+_Avoid_: Mission, objectif secondaire. Ne pas confondre avec une **Tâche** (voir **To-do list**) : une quête vit dans un chapitre et rapporte de l'XP, une tâche non.
 
 **Deadline**:
 La date limite d'une quête ; la passer sans valider la quête l'expire. Elle apparaît aussi dans l'agenda, en lecture seule (voir **Agenda**).
@@ -39,8 +39,22 @@ La colonne latérale persistante de l'application, partagée entre l'accueil et 
 _Avoid_: Sidebar, menu latéral
 
 **Onglet**:
-Un outil affiché dans le panneau gauche : « Agenda » (accueil et vue chapitre), « Quêtes » (vue chapitre, ajout de quêtes au clic ou par glisser-déposer) et « Minuteur ». To-do plus tard.
+Une entrée de la barre d'onglets du panneau gauche, dans l'ordre : « Chapitres », « Agenda », « Quêtes », « Minuteur », « To-do ». « Agenda » (accueil et vue chapitre), « Quêtes » (vue chapitre, ajout de quêtes au clic ou par glisser-déposer) et « Minuteur » s'affichent dans le panneau. « Chapitres » (« Mes chapitres ») et « To-do » s'affichent dans la zone principale de l'accueil, ce qui permet de voir la **To-do list** à côté de l'**Agenda**. Depuis une vue chapitre, choisir « Chapitres » ou « To-do » ramène à l'accueil sur cette vue.
 _Avoid_: Widget, module, section
+
+## To-do
+
+**To-do list**:
+L'outil de l'onglet « To-do » : l'utilisateur y écrit ses **Tâches**, rangées par **Rubrique**, pour s'organiser, par exemple avant de décider quand les placer dans l'**Agenda**. Autonome : elle n'est liée à aucun chapitre, quête ou créneau de révision et n'a aucun effet sur l'XP, la série, les objectifs hebdomadaires ni les badges. Ses tâches sont mémorisées à part des données de jeu.
+_Avoid_: Liste de tâches, checklist, backlog
+
+**Rubrique**:
+Un groupe de **Tâches** que l'utilisateur crée lui-même dans la **To-do list** (ex. « Mémoire », « TD droit »). C'est à lui de ranger chaque tâche dans la bonne rubrique. Une rubrique n'est pas un **Chapitre** et n'a aucun lien avec lui.
+_Avoid_: Groupe, catégorie, liste (« Chapitre » est déjà pris)
+
+**Tâche**:
+Un élément d'une **Rubrique** : un simple texte que l'utilisateur ajoute, marque « Terminée » ou « Pas commencée », ou supprime. Une tâche terminée reste affichée, texte barré, et sert d'historique des tâches passées. Sans date, priorité ni sous-tâche. Ce n'est pas une **Quête** et elle ne rapporte rien.
+_Avoid_: Item, todo, mission (réservé à la Quête)
 
 ## Minuteur
 

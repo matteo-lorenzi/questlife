@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from 'react'
 import { loadPanelPrefs, savePanelPrefs, OPEN_PANEL_TAB_EVENT } from '../../utils/panelPrefs'
 
-// Panneau gauche à onglets. `tabs` est un registre [{ id, label, component }].
+// Panneau gauche à onglets. `tabs` est un registre [{ id, label, target, component }].
 // Les composants d'onglet reçoivent `tabProps`.
 // `defaultTab` : onglet affiché tant que l'utilisateur n'en a pas mémorisé un
 // disponible dans cette vue.
-export default function LeftPanel({ tabs, tabProps = {}, defaultTab }) {
+// Onglets `target: 'main'` : ils n'ont pas de contenu dans le panneau ; les choisir appelle
+// `onSelectMainTab(id)`, et `mainTabId` indique celui que la zone principale affiche.
+export default function LeftPanel({ tabs, tabProps = {}, defaultTab, mainTabId, onSelectMainTab }) {
   const [prefs, setPrefs] = useState(loadPanelPrefs)
 
-  const activeTab = tabs.find(t => t.id === prefs.activeTab)
-    ?? tabs.find(t => t.id === defaultTab)
-    ?? tabs[0]
+  const panelTabs = tabs.filter(t => t.target !== 'main')
+  const activeTab = panelTabs.find(t => t.id === prefs.activeTab)
+    ?? panelTabs.find(t => t.id === defaultTab)
+    ?? panelTabs[0]
   const ActiveComponent = activeTab?.component
 
   // Forme fonctionnelle : l'écouteur d'événement ne doit pas lire un `prefs` périmé.
@@ -25,7 +28,7 @@ export default function LeftPanel({ tabs, tabProps = {}, defaultTab }) {
   useEffect(() => {
     function onOpenTab(e) {
       const tabId = e?.detail?.tabId
-      if (tabs.some(t => t.id === tabId)) update({ activeTab: tabId, collapsed: false })
+      if (panelTabs.some(t => t.id === tabId)) update({ activeTab: tabId, collapsed: false })
     }
     globalThis.addEventListener(OPEN_PANEL_TAB_EVENT, onOpenTab)
     return () => globalThis.removeEventListener(OPEN_PANEL_TAB_EVENT, onOpenTab)
@@ -46,16 +49,20 @@ export default function LeftPanel({ tabs, tabProps = {}, defaultTab }) {
   return (
     <div className="w-64 flex-shrink-0 bg-white dark:bg-zinc-900 border-r border-gray-100 dark:border-zinc-800 flex flex-col min-h-0">
       <div className="flex items-center gap-1 px-2 py-2 border-b border-gray-100 dark:border-zinc-800">
-        <div role="tablist" className="flex-1 flex gap-1 min-w-0">
-          {tabs.map(t => (
-            <button key={t.id} type="button" role="tab" aria-selected={t.id === activeTab?.id}
-              onClick={() => update({ activeTab: t.id })}
-              className={`px-2 py-1 rounded-md text-xs font-medium uppercase tracking-wide truncate ${
-                t.id === activeTab?.id ? 'bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-gray-200' : 'text-gray-400 hover:text-gray-600'
-              }`}>
-              {t.label}
-            </button>
-          ))}
+        <div role="tablist" className="flex-1 flex flex-wrap gap-1 min-w-0">
+          {tabs.map(t => {
+            const isMain = t.target === 'main'
+            const selected = isMain ? t.id === mainTabId : t.id === activeTab?.id
+            return (
+              <button key={t.id} type="button" role="tab" aria-selected={selected}
+                onClick={() => (isMain ? onSelectMainTab?.(t.id) : update({ activeTab: t.id }))}
+                className={`px-2 py-1 rounded-md text-xs font-medium uppercase tracking-wide truncate ${
+                  selected ? 'bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-gray-200' : 'text-gray-400 hover:text-gray-600'
+                }`}>
+                {t.label}
+              </button>
+            )
+          })}
         </div>
         <button type="button" onClick={() => update({ collapsed: true })}
           title="Réduire le panneau" aria-label="Réduire le panneau"
