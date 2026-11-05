@@ -32,7 +32,7 @@ Découpage réel, suivi dans GitHub Issues (spec : #1). Tous livrés, dans l'ord
 | #6 | Dupliquer un créneau à la semaine suivante | `duplicateAgendaSlotToNextWeek` + `shiftLocalDays` (même heure locale, +7 jours, résiste au changement d'heure ; copie non faite, rappels réarmés). |
 | #7 | Afficher les deadlines de quêtes dans l'agenda | `src/utils/agendaDeadlines.js` (`questDeadlineItems`, `buildGridDeadlines`), `getAgendaGridForDay` / `getAgendaItemBusyDays`, repères de deadline en lecture seule dans la grille et les bandes (`AgendaDeadlineButton.jsx` ; expirées et validées marquées), `openAgendaDeadline` ouvre le chapitre et sélectionne la quête. |
 | #8 | Rappels de créneaux | Champs `reminderOffsetsMs` / `sentReminderOffsetsMs` sur le créneau, saisie en minutes dans le formulaire, `checkAgendaRemindersAndEmitAlerts` branché sur la boucle de 30 s de `App.jsx` et le circuit toast + notification desktop. |
-| #9 | Documentation de l'agenda | `README.md`, `.github/copilot-instructions.md`, `GLOSSARY.md`, ce plan. |
+| #9 | Documentation de l'agenda | `README.md`, `GLOSSARY.md`, ce plan (le fichier `.github/copilot-instructions.md`, supprimé depuis, est repris dans `docs/agents/conventions.md`). |
 
 ### Évolution : Grille horaire (spec #11, tickets #12 à #17)
 

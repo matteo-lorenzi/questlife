@@ -42,6 +42,27 @@ Cette version permet de distribuer QuestLife sous forme d installeur `.exe`.
 npm run electron:dev
 ```
 
+### Profils de developpement (reels, demo, vide)
+
+Trois commandes lancent l'application de bureau en developpement, chacune avec son propre profil de donnees :
+
+| Commande | Profil | Donnees |
+|---|---|---|
+| `npm run electron:dev` | reel | tes vraies donnees, inchangees |
+| `npm run electron:demo` | `demo` | jeu de donnees complet, regenere a chaque lancement |
+| `npm run electron:empty` | `empty` | vide, comme un premier lancement |
+
+Les profils `demo` et `empty` ont leur propre dossier de donnees Electron (`%APPDATA%\QuestLife-demo` et `%APPDATA%\QuestLife-empty` sous Windows), donc leur propre `localStorage` : ils ne lisent ni n'ecrasent jamais le profil reel. Dans le profil `demo`, les donnees de jeu, la To-do et le panneau gauche sont reecrits a chaque lancement ; le theme et la duree du minuteur y sont propres au profil.
+
+Le jeu de demo (`src/demo/`) couvre toutes les fonctionnalites avec des dates relatives a "maintenant" :
+- Chapitres : un termine a 100 %, un sans quete, un a titre tres long, un "chapitre monstre" de 120 quetes.
+- Quetes : tous les statuts et types, graphe avec diamant, checklists (jusqu'a 30), pieces jointes, deadlines futures, proches et depassees, rappels.
+- Profil : XP, niveau, badges, serie, activite sur 30 jours, objectifs hebdomadaires a avancements varies.
+- Agenda : journee dense avec chevauchements, creneaux tronques, bandes "Avant 06:00" / "Apres 23:00", jour vide (apres-demain), creneaux faits ou manques, rappels a venir.
+- To-do : rubriques normales, vide, a titre long et une "rubrique monstre" de 150 taches.
+
+Le mode demo est active par la variable `VITE_DEMO=1`, posee par `electron:demo` ; le code de demo n'est jamais charge sans elle. `electron:dev`, `electron:demo` et `electron:empty` utilisent tous le port 5173 : lance-en un seul a la fois.
+
 ### Generer un installeur Windows (.exe)
 
 ```bash
