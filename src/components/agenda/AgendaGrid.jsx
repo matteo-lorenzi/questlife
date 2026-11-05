@@ -73,7 +73,7 @@ export default function AgendaGrid({ dayKey, todayKey, now, onCreateAt }) {
                   ? 'border-red-400 dark:border-red-500/60 text-red-600 dark:text-red-400'
                   : 'border-amber-400 dark:border-amber-500/60 text-amber-700 dark:text-amber-300'
               return (
-                <button key={item.id} type="button" data-testid="agenda-grid-deadline"
+                <button key={item.id} type="button" data-testid="agenda-grid-deadline" data-grid-item
                   onClick={() => openAgendaDeadline(item.questId)}
                   title={`${item.title || 'Quête sans titre'}${item.done ? ' · validée' : item.expired ? ' · expirée' : ''}`}
                   className={`absolute left-0 right-0 z-[5] flex items-center gap-1 px-1.5 text-left text-[11px] leading-none truncate border-t-2 border-dashed bg-white/80 dark:bg-zinc-900/80 ${tone}`}
