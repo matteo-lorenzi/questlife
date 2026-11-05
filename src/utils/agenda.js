@@ -80,3 +80,32 @@ export function shiftLocalSlot(startAt, endAt, days) {
 export function sortSlots(slots) {
   return [...slots].sort((a, b) => a.startAt - b.startAt || a.endAt - b.endAt);
 }
+
+// --- Grille horaire : plage 06:00–23:00, minutes locales (sans notion de pixels). ---
+export const GRID_START_HOUR = 6;
+export const GRID_END_HOUR = 23;
+
+// Minutes écoulées depuis 06:00 en heure murale locale (indépendant des changements d'heure).
+export function minutesSinceGridStart(ts) {
+  const d = new Date(ts);
+  return d.getHours() * 60 + d.getMinutes() - GRID_START_HOUR * 60;
+}
+
+// Créneaux d'un jour local placés dans la grille (début/fin en minutes depuis 06:00).
+// Les éléments entièrement hors plage sont exclus ici ; la troncature marquée et les
+// bandes relèvent de tickets suivants.
+export function buildGridItems(slots, dayKey) {
+  const max = (GRID_END_HOUR - GRID_START_HOUR) * 60;
+  return sortSlots(slots.filter((s) => localDayKey(s.startAt) === dayKey))
+    .map((s) => ({
+      kind: "slot",
+      id: s.id,
+      title: s.title,
+      chapterId: s.chapterId,
+      done: s.done,
+      startMin: minutesSinceGridStart(s.startAt),
+      endMin: minutesSinceGridStart(s.endAt),
+    }))
+    .filter((i) => i.endMin > 0 && i.startMin < max)
+    .map((i) => ({ ...i, startMin: Math.max(0, i.startMin), endMin: Math.min(max, i.endMin) }));
+}

@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../../store/useStore'
 import { localDayKey, localTimestamp } from '../../utils/agenda'
-import { questDeadlineItems, mergeDayItems } from '../../utils/agendaDeadlines'
-import DeadlineRow from './DeadlineRow'
-import AgendaSlotRow, { ChapterSelect, ReminderField, parseReminderMinutes } from './AgendaSlotRow'
+import { questDeadlineItems } from '../../utils/agendaDeadlines'
+import AgendaGrid from './AgendaGrid'
+import { ChapterSelect, ReminderField, parseReminderMinutes } from './AgendaSlotRow'
 
 const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 const MONTH_FMT = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' })
@@ -13,7 +13,6 @@ const DAY_FMT = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeri
 export default function AgendaTab() {
   const slots = useStore(s => s.agenda.slots)
   const createAgendaSlot = useStore(s => s.createAgendaSlot)
-  const openAgendaDeadline = useStore(s => s.openAgendaDeadline)
   const quests = useStore(s => s.quests)
 
   // Horloge légère : garde `expired` à jour sans interaction.
@@ -44,7 +43,6 @@ export default function AgendaTab() {
     ...slots.map(s => localDayKey(s.startAt)),
     ...deadlines.map(d => localDayKey(d.at)),
   ]), [slots, deadlines])
-  const items = useMemo(() => mergeDayItems(slots, deadlines, selected), [slots, deadlines, selected])
 
   const first = new Date(cursor.year, cursor.month, 1)
   const offset = (first.getDay() + 6) % 7 // lundi en premier
@@ -176,17 +174,7 @@ export default function AgendaTab() {
           </form>
         )}
 
-        {items.length === 0 ? (
-          <p className="text-xs text-gray-400">Aucun créneau ce jour.</p>
-        ) : (
-          <ul className="space-y-1">
-            {items.map(s => s.kind === 'deadline' ? (
-              <DeadlineRow key={s.id} item={s} onOpen={openAgendaDeadline} />
-            ) : (
-              <AgendaSlotRow key={s.id} slot={s} />
-            ))}
-          </ul>
-        )}
+        <AgendaGrid dayKey={selected} todayKey={todayKey} now={now} />
       </div>
     </div>
   )
