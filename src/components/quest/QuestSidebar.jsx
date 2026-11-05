@@ -33,10 +33,7 @@ export default function QuestSidebar({ onQuickCreate }) {
   }
 
   return (
-    <div className="w-44 flex-shrink-0 bg-white border-r border-gray-100 flex flex-col">
-      <div className="px-3 py-3 border-b border-gray-100">
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Ajouter</p>
-      </div>
+    <div className="flex flex-col h-full">
       <div className="p-2 space-y-1.5 flex-1">
         {TYPES.map(t => (
           <button key={t.type} type="button" draggable onDragStart={e => handleDragStart(e, t.type)}
