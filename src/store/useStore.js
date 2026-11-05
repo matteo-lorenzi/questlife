@@ -10,6 +10,12 @@ import {
   CHAPTER_COLORS,
 } from "../utils/constants";
 import { recomputeStatuses } from "../utils/graph";
+import {
+  localDayKey,
+  validateSlotInput,
+  normalizeAgenda,
+  sortSlots,
+} from "../utils/agenda";
 
 // ── LocalStorage persistence helper ──────────────────────────────────────────
 const LS_KEY = "questlife_data";
@@ -32,6 +38,7 @@ function saveState(state) {
         quests: state.quests,
         profile: state.profile,
         canvasViewports: state.canvasViewports,
+        agenda: state.agenda,
       }),
     );
   } catch (e) {
@@ -274,6 +281,7 @@ export const useStore = create((set, get) => ({
   })),
   profile: initialProfile,
   canvasViewports: initial.canvasViewports || {},
+  agenda: normalizeAgenda(initial.agenda),
 
   // UI state (not persisted)
   activeChapterId: null,
@@ -287,6 +295,37 @@ export const useStore = create((set, get) => ({
   // ── Persist helper ─────────────────────────────────────────────────────────
   _persist() {
     saveState(get());
+  },
+
+  // ── Agenda (créneaux de révision, jours en heure locale) ───────────────────
+  // Retourne { ok: true, slot } ou { ok: false, error }.
+  createAgendaSlot({ title, startAt, endAt }) {
+    const error = validateSlotInput({ title, startAt, endAt });
+    if (error) return { ok: false, error };
+    const slot = {
+      id: nanoid(),
+      title: title.trim(),
+      startAt,
+      endAt,
+      chapterId: null,
+      done: false,
+      reminderOffsetsMs: [],
+      sentReminderOffsetsMs: [],
+      createdAt: Date.now(),
+    };
+    set((s) => ({ agenda: { ...s.agenda, slots: [...s.agenda.slots, slot] } }));
+    get()._persist();
+    return { ok: true, slot };
+  },
+
+  // Créneaux d'un jour local "YYYY-MM-DD", triés par heure de début.
+  getAgendaSlotsForDay(dayKey) {
+    return sortSlots(get().agenda.slots.filter((s) => localDayKey(s.startAt) === dayKey));
+  },
+
+  // Clés des jours locaux contenant au moins un créneau.
+  getAgendaBusyDays() {
+    return [...new Set(get().agenda.slots.map((s) => localDayKey(s.startAt)))];
   },
 
   // ── Chapters ───────────────────────────────────────────────────────────────

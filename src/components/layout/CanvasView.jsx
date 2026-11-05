@@ -8,7 +8,7 @@ import 'reactflow/dist/style.css'
 import { useStore } from '../../store/useStore'
 import QuestNode from '../quest/QuestNode'
 import LeftPanel from '../panel/LeftPanel'
-import { LEFT_PANEL_TABS } from '../panel/tabs'
+import { tabsForView } from '../panel/tabs'
 import QuestPanel from '../editor/QuestPanel'
 import { QUEST_STATUS, CANVAS_BACKGROUNDS } from '../../utils/constants'
 import { wouldCreateCycle } from '../../utils/graph'
@@ -112,7 +112,7 @@ export default function CanvasView({ chapter }) {
 
   return (
     <div className="flex flex-1 overflow-hidden">
-      <LeftPanel tabs={LEFT_PANEL_TABS} tabProps={{ onQuickCreate: handleQuickCreate }} />
+      <LeftPanel tabs={tabsForView('chapter')} defaultTab="quests" tabProps={{ onQuickCreate: handleQuickCreate }} />
       <div
         ref={canvasRef}
         className="flex-1 relative"
