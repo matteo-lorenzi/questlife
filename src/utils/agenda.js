@@ -91,6 +91,16 @@ export function minutesSinceGridStart(ts) {
   return d.getHours() * 60 + d.getMinutes() - GRID_START_HOUR * 60;
 }
 
+// Clic sur la grille (minutes depuis 06:00) -> début arrondi à la demi-heure la plus proche,
+// fin à +1 h (plafonnée à 23:59 pour rester dans le même jour).
+export function slotTimesForGridClick(minFromGridStart) {
+  const max = (GRID_END_HOUR - GRID_START_HOUR) * 60;
+  const rounded = Math.min(max, Math.max(0, Math.round(minFromGridStart / 30) * 30));
+  const fmt = (m) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+  const startAbs = GRID_START_HOUR * 60 + rounded;
+  return { start: fmt(startAbs), end: fmt(Math.min(startAbs + 60, 24 * 60 - 1)) };
+}
+
 // Créneaux d'un jour local placés dans la grille (début/fin en minutes depuis 06:00).
 // Les éléments entièrement hors plage sont exclus ici ; la troncature marquée et les
 // bandes relèvent de tickets suivants.

@@ -74,6 +74,14 @@ export default function AgendaTab() {
     setFormOpen(true)
   }
 
+  function openFormAt({ start: s, end: en }) {
+    setDay(selected)
+    setStart(s)
+    setEnd(en)
+    setError('')
+    setFormOpen(true)
+  }
+
   function submit(e) {
     e.preventDefault()
     const result = createAgendaSlot({
@@ -174,7 +182,7 @@ export default function AgendaTab() {
           </form>
         )}
 
-        <AgendaGrid dayKey={selected} todayKey={todayKey} now={now} />
+        <AgendaGrid dayKey={selected} todayKey={todayKey} now={now} onCreateAt={openFormAt} />
       </div>
     </div>
   )
